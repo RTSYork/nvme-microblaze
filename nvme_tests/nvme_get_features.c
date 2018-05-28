@@ -34,7 +34,49 @@
  * @brief Invoke NVMe get features command.
  */
 
-#include "nvme_common.c"
+#include <stdio.h>
+#include "nvme_tests.h"
+#include "../unvme/unvme_mem.h"
+#include "../unvme/unvme_nvme.h"
+#include "../unvme/unvme_log.h"
+
+static mem_device_t* memdev;
+static nvme_device_t* nvmedev;
+static mem_dma_t* adminsq;
+static mem_dma_t* admincq;
+
+/**
+ * NVMe setup.
+ */
+static void nvme_setup(int pci, int aqsize)
+{
+    memdev = mem_create(NULL, pci);
+    if (!memdev) errx(1, "vfio_create");
+
+    nvmedev = nvme_create(NULL);
+    if (!nvmedev) errx(1, "nvme_create");
+
+    adminsq = mem_dma_alloc(memdev, aqsize * sizeof(nvme_sq_entry_t), 1);
+    if (!adminsq) errx(1, "vfio_dma_alloc");
+    admincq = mem_dma_alloc(memdev, aqsize * sizeof(nvme_cq_entry_t), 1);
+    if (!admincq) errx(1, "vfio_dma_alloc");
+
+    if (!nvme_adminq_setup(nvmedev, aqsize, adminsq->buf, adminsq->addr,
+                                            admincq->buf, admincq->addr)) {
+        errx(1, "nvme_setup_adminq");
+    }
+}
+
+/**
+ * NVMe cleanup.
+ */
+static void nvme_cleanup()
+{
+    mem_dma_free(adminsq);
+    mem_dma_free(admincq);
+    nvme_delete(nvmedev);
+    mem_delete(memdev);
+}
 
 static char* features[] = {
     "",
