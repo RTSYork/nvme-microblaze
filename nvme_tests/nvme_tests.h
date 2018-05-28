@@ -3,9 +3,9 @@
 
 #include "xil_types.h"
 
-int nvme_identify(char* dev);
-int nvme_get_features(char* dev);
-int nvme_get_log_page(char* dev, int lid, int nsid);
+int nvme_identify(int pci);
+int nvme_get_features(int pci);
+int nvme_get_log_page(int pci, int lid, int nsid);
 
 #endif /* SRC_NVME_TESTS_H_ */
 

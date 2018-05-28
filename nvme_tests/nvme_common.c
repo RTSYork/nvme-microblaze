@@ -53,14 +53,8 @@ static vfio_dma_t* admincq;
 /**
  * NVMe setup.
  */
-static void nvme_setup(const char* pciname, int aqsize)
+static void nvme_setup(int pci, int aqsize)
 {
-    int b, d, f;
-    if (sscanf(pciname, "%x:%x.%x", &b, &d, &f) != 3) {
-        errx(1, "invalid PCI %s (expect %%x:%%x.%%x format)", pciname);
-    }
-    int pci = (b << 16) + (d << 8) + f;
-
     if (log_open_stdout()) exit(1);
     vfiodev = vfio_create(NULL, pci);
     if (!vfiodev) errx(1, "vfio_create");

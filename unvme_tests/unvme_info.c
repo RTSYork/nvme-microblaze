@@ -44,11 +44,11 @@
 #include "../unvme/unvme.h"
 
 
-int unvme_info(char* dev)
+int unvme_info(int pci, int nsid)
 {
 	printf("\r\nunvme_info test starting...\r\n\n");
 
-    const unvme_ns_t* ns = unvme_open(dev);
+    const unvme_ns_t* ns = unvme_open(pci, nsid);
     printf("Namespace:               %d (of %d)\n", ns->id, ns->nscount);
     printf("Vendor ID:               %#x\n", ns->vid);
     printf("Model number:            %.40s\n", ns->mn);

@@ -61,13 +61,11 @@ static char* features[] = {
 /**
  * Main program.
  */
-int unvme_get_features(char* dev)
+int unvme_get_features(int pci, int nsid)
 {
 	printf("\r\nunvme_get_features test starting...\r\n\n");
 
-    int nsid = 1;
-
-    const unvme_ns_t* ns = unvme_open(dev);
+    const unvme_ns_t* ns = unvme_open(pci, nsid);
     if (!ns) {
     	printf("error: unvme_open\r\n");
     	return 1;

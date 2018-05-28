@@ -220,7 +220,7 @@ void run_test(const char* name, int rw)
 /**
  * Main program.
  */
-int unvme_lat_test(int runtime_in, int qcount_in, int qsize_in, char* pciname)
+int unvme_lat_test(int runtime_in, int qcount_in, int qsize_in, int pci, int nsid)
 {
 	printf("\r\nunvme_lat_test test starting...\r\n\n");
 
@@ -231,7 +231,7 @@ int unvme_lat_test(int runtime_in, int qcount_in, int qsize_in, char* pciname)
 
     printf("LATENCY TEST BEGIN\n");
     time_t tstart = timer_get_value();
-    if (!(ns = unvme_open(pciname))) exit(1);
+    if (!(ns = unvme_open(pci, nsid))) exit(1);
     if (qcount <= 0 || qcount > ns->qcount) {
     	printf("error: qcount limit %ld\r\n", ns->qcount);
     	return 1;

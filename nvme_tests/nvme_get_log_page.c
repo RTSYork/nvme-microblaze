@@ -111,7 +111,7 @@ void print_firmware_slot(void* buf)
 /**
  * Main program.
  */
-int nvme_get_log_page(char* dev, int lid, int nsid)
+int nvme_get_log_page(int pci, int lid, int nsid)
 {
 	printf("\r\n%s test starting...\r\n\n", __func__);
 
@@ -124,7 +124,7 @@ int nvme_get_log_page(char* dev, int lid, int nsid)
         return 1;
     }
 
-    nvme_setup(dev, 8);
+    nvme_setup(pci, 8);
     vfio_dma_t* dma = vfio_dma_alloc(vfiodev, 8192, 0);
     if (!dma) errx(1, "vfio_dma_alloc");
 

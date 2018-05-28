@@ -54,13 +54,13 @@ static char* features[] = {
 /**
  * Main program.
  */
-int nvme_get_features(char* dev)
+int nvme_get_features(int pci)
 {
 	printf("\r\n%s test starting...\r\n\n", __func__);
 
     int nsid = 1;
 
-    nvme_setup(dev, 8);
+    nvme_setup(pci, 8);
     vfio_dma_t* dma = vfio_dma_alloc(vfiodev, sizeof(nvme_feature_lba_data_t), 0);
     if (!dma) errx(1, "vfio_dma_alloc");
     u32 res;

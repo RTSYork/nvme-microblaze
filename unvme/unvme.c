@@ -38,25 +38,18 @@
 
 /**
  * Open a client session with specified number of IO queues and queue size.
- * @param   pciname     PCI device name (as %x:%x.%x[/NSID] format)
+ * @param   pci         PCI device (as 0xbbddff format)
+ * @param   nsid        namespace ID
  * @param   qcount      number of io queues
  * @param   qsize       io queue size
  * @return  namespace pointer or NULL if error.
  */
-const unvme_ns_t* unvme_openq(const char* pciname, int qcount, int qsize)
+const unvme_ns_t* unvme_openq(int pci, int nsid, int qcount, int qsize)
 {
     if (qcount < 0 || qsize < 0 || qsize == 1) {
         ERROR("invalid qcount %d or qsize %d", qcount, qsize);
         return NULL;
     }
-
-    int b, d, f, nsid = 1;
-    if ((sscanf(pciname, "%x:%x.%x/%x", &b, &d, &f, &nsid) != 4) &&
-        (sscanf(pciname, "%x:%x.%x", &b, &d, &f) != 3)) {
-        ERROR("invalid PCI %s (expect %%x:%%x.%%x[/NSID] format)", pciname);
-        return NULL;
-    }
-    int pci = (b << 16) + (d << 8) + f;
 
     return unvme_do_open(pci, nsid, qcount, qsize);
 }
@@ -66,9 +59,9 @@ const unvme_ns_t* unvme_openq(const char* pciname, int qcount, int qsize)
  * @param   pciname     PCI device name (as %x:%x.%x[/NSID] format)
  * @return  namespace pointer or NULL if error.
  */
-const unvme_ns_t* unvme_open(const char* pciname)
+const unvme_ns_t* unvme_open(int pci, int nsid)
 {
-    return unvme_openq(pciname, 0, 0);
+    return unvme_openq(pci, nsid, 0, 0);
 }
 
 /**

@@ -106,13 +106,13 @@ void print_namespace(void* buf, int nsid)
 /**
  * Main program.
  */
-int nvme_identify(char* dev)
+int nvme_identify(int pci)
 {
 	printf("\r\n%s test starting...\r\n\n", __func__);
 
     int nsid = 0;
 
-    nvme_setup(dev, 8);
+    nvme_setup(pci, 8);
     vfio_dma_t* dma = vfio_dma_alloc(vfiodev, 16384, 0);
     if (!dma) errx(1, "vfio_dma_alloc");
 
