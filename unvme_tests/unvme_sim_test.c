@@ -71,7 +71,6 @@ int unvme_sim_test(u64 lba, u64 size, int pci, int nsid)
     if (!nlb) nlb = 1;
 
     if (slba == -1L) {
-//        srandom(timer_get_value());
         srandom(0);
         slba = (random() % ns->blockcount) - (ns->qcount * nlb);
         slba &= ~(ns->nbpp - 1);
@@ -119,7 +118,6 @@ int unvme_sim_test(u64 lba, u64 size, int pci, int nsid)
     unvme_close(ns);
 
     printf("SIMPLE WRITE-READ-VERIFY TEST COMPLETE (%lld secs)\n\r", (timer_get_value() - tstart) / TIMER_TICKS_PER_SECOND);
-//    printf("SIMPLE WRITE-READ-VERIFY TEST COMPLETE\n\r");
 
     printf("\r\nunvme_sim_test test complete\r\n\n");
     return 0;

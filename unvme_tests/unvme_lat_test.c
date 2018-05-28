@@ -41,9 +41,6 @@
 #include <string.h>
 #include <pthread.h>
 #include <sched.h>
-//#include <semaphore.h>
-//#include <time.h>
-//#include <err.h>
 
 #include "../unvme/unvme.h"
 #include "../unvme/rdtsc.h"
@@ -66,9 +63,6 @@ static int qsize = 8;           ///< queue size
 static int runtime = 15;        ///< run time in seconds
 static u64 endtsc;              ///< end run tsc
 static u64 timeout;             ///< tsc elapsed timeout
-//static sem_t sm_ready;          ///< semaphore to start thread
-//static sem_t sm_start;          ///< semaphore to start test
-//static pthread_t* ses;          ///< array of thread sessions
 static u64 last_lba;            ///< last page boundary lba
 static u64 ioc;                 ///< total number of io count
 static u64 avg_slat;            ///< total submission time
@@ -129,9 +123,6 @@ static void* run_thread(void* arg)
         p++;
     }
 
-//    sem_post(&sm_ready);
-//    sem_wait(&sm_start);
-
     for (i = 0; i < qdepth; i++) io_submit(q, rw, pages + i);
 
     i = 0;
@@ -181,15 +172,11 @@ void run_test(const char* name, int rw)
     min_clat = -1;
     max_clat = 0;
 
-//    sem_init(&sm_ready, 0, 0);
-//    sem_init(&sm_start, 0, 0);
-
     u64 tsec = rdtsc_second();
     int q;
     for (q = 0; q < qcount; q++) {
         long arg = (rw << 16) + q;
         run_thread((void*)arg);
-//        sem_wait(&sm_ready);
     }
 
     sleep(1);
@@ -198,9 +185,6 @@ void run_test(const char* name, int rw)
            name, runtime);
     endtsc = rdtsc() + ((u64)runtime * tsec);
     timeout = (u64)UNVME_TIMEOUT * tsec;
-
-//    for (q = 0; q < qcount; q++) sem_post(&sm_start);
-//    for (q = 0; q < qcount; q++) pthread_join(ses[q], 0);
 
     u64 utsc = tsec / 1000000;
     printf("%s: slat=(%.2f-%.2f %.2f) lat=(%.2f-%.2f %.2f) usecs ioc=%llu\n",
@@ -212,9 +196,6 @@ void run_test(const char* name, int rw)
             name, min_slat, max_slat, avg_slat/ioc,
             min_clat, max_clat, avg_clat/ioc, ioc);
     */
-
-//    sem_destroy(&sm_ready);
-//    sem_destroy(&sm_start);
 }
 
 /**
@@ -249,12 +230,9 @@ int unvme_lat_test(int runtime_in, int qcount_in, int qsize_in, int pci, int nsi
             ns->device, qcount, ns->qcount, qsize, ns->qsize,
             ns->blockcount, ns->blocksize, ns->maxbpio);
 
-//    ses = calloc(qcount, sizeof(pthread_t));
-
     run_test("read", 0);
     run_test("write", 1);
 
-//    free(ses);
     unvme_close(ns);
 
     printf("LATENCY TEST COMPLETE (%lld secs)\n", (timer_get_value() - tstart) / TIMER_TICKS_PER_SECOND);
