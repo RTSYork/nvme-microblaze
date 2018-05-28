@@ -219,12 +219,14 @@ mem_device_t* mem_create(mem_device_t* dev, int pci)
 	pcie_ecam_write_pci(dev->pci, PCI_COMMAND, cmd, sizeof(*cmd));
 	pcie_ecam_read_pci(dev->pci, PCI_COMMAND, cmd, sizeof(*cmd));
 
-//	pcie_print_ecam_pci(dev->pci, 0x20);
+#ifdef UNVME_DEBUG
+	pcie_print_ecam_pci(dev->pci, 0x20);
+#endif
 
 	pcie_ecam_disable();
 
-	DEBUG_FN("%x vendor=%#x cmd=%#x msix=%d device=%04x rev=%d",
-			 pci, *vendor, *cmd, dev->msixsize,
+	DEBUG_FN("%x vendor=%#x cmd=%#x device=%04x rev=%d",
+			 pci, *vendor, *cmd,
 			 *(__u16*)(config + PCI_DEVICE_ID), config[PCI_REVISION_ID]);
 
     dev->membuf = (void *)MEM_BASE;

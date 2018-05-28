@@ -40,7 +40,6 @@
 #include <sys/types.h>
 
 #include "unvme.h"
-#include "unvme_lock.h"
 #include "unvme_log.h"
 #include "unvme_mem.h"
 #include "unvme_nvme.h"
@@ -78,7 +77,6 @@ typedef struct _unvme_iomem {
     mem_dma_t**            map;        ///< dynamic array of allocated memory
     int                     size;       ///< array size
     int                     count;      ///< array count
-//    unvme_lock_t            lock;       ///< map access lock
 } unvme_iomem_t;
 
 /// IO full descriptor
@@ -117,7 +115,7 @@ typedef struct _unvme_queue {
 
 /// Device context
 typedef struct _unvme_device {
-    mem_device_t           vfiodev;    ///< VFIO device
+    mem_device_t            memdev;     ///< memory device
     nvme_device_t           nvmedev;    ///< NVMe device
     unvme_queue_t           adminq;     ///< adminq queue
     int                     refcount;   ///< reference count

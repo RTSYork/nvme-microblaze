@@ -36,7 +36,6 @@
 
 #include "unvme_nvme.h"
 
-//#include <sys/mman.h>
 #include <string.h>
 #include <errno.h>
 
@@ -50,14 +49,12 @@
 static inline volatile u32 r32(nvme_device_t* dev, volatile u32* addr)
 {
     volatile u32 val = *addr;
-//    usleep(200);
     DEBUG("r32 %#lx %#x", (u32) addr - (u32) dev->reg, val);
     return val;
 }
 
 static inline void w32(nvme_device_t* dev, volatile u32* addr, volatile u32 val)
 {
-//	usleep(200);
     DEBUG("w32 %#lx %#x", (u32) addr - (u32) dev->reg, val);
     *addr = val;
 }
@@ -65,14 +62,12 @@ static inline void w32(nvme_device_t* dev, volatile u32* addr, volatile u32 val)
 static inline volatile u64 r64(nvme_device_t* dev, volatile u64* addr)
 {
 	volatile u64 val = *addr;
-//	usleep(200);
     DEBUG("r64 %#lx %#lx", (u32) addr - (u32) dev->reg, val);
     return val;
 }
 
 static inline void w64(nvme_device_t* dev, volatile u64* addr, volatile u64 val)
 {
-//	usleep(200);
     DEBUG("w64 %#lx %#lx", (u32) addr - (u32) dev->reg, val);
     *addr = val;
 }
@@ -171,7 +166,6 @@ int nvme_check_completion(nvme_queue_t* q, int* stat, u32* cqe_cs)
         q->cq_phase = !q->cq_phase;
     }
     if (cqe_cs) *cqe_cs = cqe->cs;
-//    usleep(10000); // Not sure why this is needed, but having it here seems to make the completion work reliably
     w32(q->dev, q->cq_doorbell, q->cq_head);
 
 #if 0
@@ -202,7 +196,6 @@ int nvme_wait_completion(nvme_queue_t* q, int cid, int timeout)
     u64 endtsc = 0;
 
     do {
-//    	usleep(100);
         int stat;
         int ret = nvme_check_completion(q, &stat, NULL);
         if (ret >= 0) {
@@ -657,12 +650,6 @@ nvme_device_t* nvme_create(nvme_device_t* dev)
     dev->rdtsec = rdtsc_second();
 
     dev->reg = (void *)0xe0010000;
-//    dev->reg = mmap(0, sizeof(nvme_controller_reg_t),
-//                    PROT_READ|PROT_WRITE, MAP_SHARED|MAP_LOCKED, mapfd, 0);
-//    if (dev->reg == MAP_FAILED) {
-//        ERROR("mmap: %s", strerror(errno));
-//        return NULL;
-//    }
 
     nvme_controller_cap_t cap;
     cap.val = r64(dev, &dev->reg->cap.val);
@@ -689,11 +676,6 @@ nvme_device_t* nvme_create(nvme_device_t* dev)
  */
 void nvme_delete(nvme_device_t* dev)
 {
-//    if (dev && dev->reg) {
-//        if (munmap(dev->reg, sizeof(nvme_controller_reg_t))) {
-//            ERROR("munmap: %s", strerror(errno));
-//        }
-//    }
     if (!dev->ext) free(dev);
 }
 

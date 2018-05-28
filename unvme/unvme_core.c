@@ -36,7 +36,6 @@
 
 #include "unvme_core.h"
 
-//#include <sys/mman.h>
 #include <string.h>
 #include <signal.h>
 #include <sched.h>
@@ -49,9 +48,7 @@
 
 
 // Global static variables
-//static const char*      unvme_log = "/dev/shm/unvme.log";   ///< Log filename
 static unvme_session_t* unvme_ses = NULL;                   ///< session list
-//static unvme_lock_t     unvme_lock = 0;                     ///< session lock
 
 
 /**
@@ -118,7 +115,6 @@ static int unvme_check_completion(unvme_queue_t* q, int timeout, u32* cqe_cs)
     do {
         cid = nvme_check_completion(q->nvmeq, &err, cqe_cs);
         if (timeout == 0 || cid >= 0) break;
-//        if (endtsc) sched_yield();
         else endtsc = rdtsc() + (u64)timeout * q->nvmeq->dev->rdtsec;
     } while (rdtsc() < endtsc);
 
@@ -202,20 +198,16 @@ static u64 unvme_map_dma(const unvme_ns_t* ns, void* buf, u64 bufsz)
 {
     unvme_device_t* dev = ((unvme_session_t*)ns->ses)->dev;
     mem_dma_t* dma = NULL;
-//    unvme_lockr(&dev->iomem.lock);
     int i;
     for (i = 0; i < dev->iomem.count; i++) {
         dma = dev->iomem.map[i];
         if (dma->buf <= buf && buf < (dma->buf + dma->size)) break;
     }
-//    unvme_unlockr(&dev->iomem.lock);
     if (i == dev->iomem.count)
         FATAL("invalid I/O buffer address");
     u64 addr = dma->addr + (u64)(buf - dma->buf);
     if ((addr + bufsz) > (dma->addr + dma->size))
         FATAL("buffer overrun");
-    //if ((addr & (ns->blocksize - 1)) != 0)
-    //    FATAL("unaligned buffer address");
     return addr;
 }
 
@@ -294,9 +286,9 @@ static void unvme_queue_init(unvme_device_t* dev, unvme_queue_t* q, int qsize)
     q->size = qsize;
 
     // allocate queue entries and PRP list
-    q->sqdma = mem_dma_alloc(&dev->vfiodev, qsize * sizeof(nvme_sq_entry_t), 1);
-    q->cqdma = mem_dma_alloc(&dev->vfiodev, qsize * sizeof(nvme_cq_entry_t), 1);
-    q->prplist = mem_dma_alloc(&dev->vfiodev, qsize << dev->ns.pageshift, 1);
+    q->sqdma = mem_dma_alloc(&dev->memdev, qsize * sizeof(nvme_sq_entry_t), 1);
+    q->cqdma = mem_dma_alloc(&dev->memdev, qsize * sizeof(nvme_cq_entry_t), 1);
+    q->prplist = mem_dma_alloc(&dev->memdev, qsize << dev->ns.pageshift, 1);
     if (!q->sqdma || !q->cqdma || !q->prplist)
         FATAL("vfio_dma_alloc");
 
@@ -340,7 +332,7 @@ static void unvme_queue_cleanup(unvme_queue_t* q)
  */
 static void unvme_adminq_create(unvme_device_t* dev, int qsize)
 {
-    DEBUG_FN("%x", dev->vfiodev.pci);
+    DEBUG_FN("%x", dev->memdev.pci);
     unvme_queue_t* adminq = &dev->adminq;
     unvme_queue_init(dev, adminq, qsize);
     if (!nvme_adminq_setup(&dev->nvmedev, qsize,
@@ -356,7 +348,7 @@ static void unvme_adminq_create(unvme_device_t* dev, int qsize)
  */
 static void unvme_adminq_delete(unvme_device_t* dev)
 {
-    DEBUG_FN("%x", dev->vfiodev.pci);
+    DEBUG_FN("%x", dev->memdev.pci);
     unvme_queue_cleanup(&dev->adminq);
 }
 
@@ -367,14 +359,14 @@ static void unvme_adminq_delete(unvme_device_t* dev)
  */
 static void unvme_ioq_create(unvme_device_t* dev, int q)
 {
-    DEBUG_FN("%x q=%d", dev->vfiodev.pci, q+1);
+    DEBUG_FN("%x q=%d", dev->memdev.pci, q+1);
     unvme_queue_t* ioq = dev->ioqs + q;
     unvme_queue_init(dev, ioq, dev->ns.qsize);
     if (!(ioq->nvmeq = nvme_ioq_create(&dev->nvmedev, NULL, q+1, ioq->size,
                                        ioq->sqdma->buf, ioq->sqdma->addr,
                                        ioq->cqdma->buf, ioq->cqdma->addr)))
         FATAL("nvme_ioq_create %d failed", q+1);
-    DEBUG_FN("%x q=%d qd=%d db=%#04lx", dev->vfiodev.pci, ioq->nvmeq->id,
+    DEBUG_FN("%x q=%d qd=%d db=%#04lx", dev->memdev.pci, ioq->nvmeq->id,
              ioq->size, (u32)ioq->nvmeq->sq_doorbell - (u32)dev->nvmedev.reg);
 }
 
@@ -385,7 +377,7 @@ static void unvme_ioq_create(unvme_device_t* dev, int q)
  */
 static void unvme_ioq_delete(unvme_device_t* dev, int q)
 {
-    DEBUG_FN("%x %d", dev->vfiodev.pci, q+1);
+    DEBUG_FN("%x %d", dev->memdev.pci, q+1);
     unvme_queue_t* ioq = dev->ioqs + q;
     (void)nvme_ioq_delete(ioq->nvmeq);
     unvme_queue_cleanup(ioq);
@@ -402,7 +394,7 @@ static void unvme_ns_init(unvme_ns_t* ns, int nsid)
     ns->id = nsid;
     ns->maxiopq = ns->qsize - 1;
 
-    mem_dma_t* dma = mem_dma_alloc(&dev->vfiodev, ns->pagesize, 1);
+    mem_dma_t* dma = mem_dma_alloc(&dev->memdev, ns->pagesize, 1);
 
     if (nvme_acmd_identify(&dev->nvmedev, nsid, dma->addr, 0))
         FATAL("nvme_acmd_identify %d failed", nsid);
@@ -433,13 +425,12 @@ static void unvme_cleanup(unvme_session_t* ses)
         for (q = 0; q < dev->ns.qcount; q++) unvme_ioq_delete(dev, q);
         unvme_adminq_delete(dev);
         nvme_delete(&dev->nvmedev);
-        mem_delete(&dev->vfiodev);
+        mem_delete(&dev->memdev);
         free(dev->ioqs);
         free(dev);
     }
     LIST_DEL(unvme_ses, ses);
     free(ses);
-    if (!unvme_ses) log_close();
 }
 
 
@@ -453,14 +444,6 @@ static void unvme_cleanup(unvme_session_t* ses)
  */
 unvme_ns_t* unvme_do_open(int pci, int nsid, int qcount, int qsize)
 {
-//    unvme_lockw(&unvme_lock);
-    if (!unvme_ses) {
-		if (log_open_stdout()) {
-//            unvme_unlockw(&unvme_lock);
-            exit(1);
-        }
-    }
-
     // check for existing opened device
     unvme_session_t* xses = unvme_ses;
     while (xses) {
@@ -485,12 +468,12 @@ unvme_ns_t* unvme_do_open(int pci, int nsid, int qcount, int qsize)
     } else {
         // setup controller namespace
         dev = zalloc(sizeof(unvme_device_t));
-        mem_create(&dev->vfiodev, pci);
+        mem_create(&dev->memdev, pci);
         nvme_create(&dev->nvmedev);
         unvme_adminq_create(dev, 64);
 
         // get controller info
-        mem_dma_t* dma = mem_dma_alloc(&dev->vfiodev, 4096, 1);
+        mem_dma_t* dma = mem_dma_alloc(&dev->memdev, 4096, 1);
         if (nvme_acmd_identify(&dev->nvmedev, 0, dma->addr, 0))
             FATAL("nvme_acmd_identify controller failed");
         nvme_identify_ctlr_t* idc = malloc(sizeof(nvme_identify_ctlr_t));
@@ -556,7 +539,6 @@ unvme_ns_t* unvme_do_open(int pci, int nsid, int qcount, int qsize)
     LIST_ADD(unvme_ses, ses);
 
     INFO_FN("%s (%.40s) is ready", ses->ns.device, ses->ns.mn);
-//    unvme_unlockw(&unvme_lock);
     return &ses->ns;
 }
 
@@ -569,10 +551,8 @@ int unvme_do_close(const unvme_ns_t* ns)
 {
     DEBUG_FN("%s", ns->device);
     unvme_session_t* ses = ns->ses;
-    if (ns->pci != ses->dev->vfiodev.pci) return -1;
-//    unvme_lockw(&unvme_lock);
+    if (ns->pci != ses->dev->memdev.pci) return -1;
     unvme_cleanup(ses);
-//    unvme_unlockw(&unvme_lock);
     return 0;
 }
 
@@ -589,8 +569,7 @@ void* unvme_do_alloc(const unvme_ns_t* ns, u64 size)
     unvme_iomem_t* iomem = &dev->iomem;
     void* buf = NULL;
 
-//    unvme_lockw(&iomem->lock);
-    mem_dma_t* dma = mem_dma_alloc(&dev->vfiodev, size, 0);
+    mem_dma_t* dma = mem_dma_alloc(&dev->memdev, size, 0);
     if (dma) {
         if (iomem->count == iomem->size) {
             iomem->size += 256;
@@ -599,7 +578,6 @@ void* unvme_do_alloc(const unvme_ns_t* ns, u64 size)
         iomem->map[iomem->count++] = dma;
         buf = dma->buf;
     }
-//    unvme_unlockw(&iomem->lock);
     return buf;
 }
 
@@ -615,7 +593,6 @@ int unvme_do_free(const unvme_ns_t* ns, void* buf)
     unvme_device_t* dev = ((unvme_session_t*)ns->ses)->dev;
     unvme_iomem_t* iomem = &dev->iomem;
 
-//    unvme_lockw(&iomem->lock);
     int i;
     for (i = 0; i < iomem->count; i++) {
         if (buf == iomem->map[i]->buf) {
@@ -623,11 +600,9 @@ int unvme_do_free(const unvme_ns_t* ns, void* buf)
             iomem->count--;
             if (i != iomem->count)
                 iomem->map[i] = iomem->map[iomem->count];
-//            unvme_unlockw(&iomem->lock);
             return 0;
         }
     }
-//    unvme_unlockw(&iomem->lock);
     return -1;
 }
 

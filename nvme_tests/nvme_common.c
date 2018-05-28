@@ -35,7 +35,6 @@
  */
 
 #include <stdio.h>
-//#include <err.h>
 
 #include "nvme_tests.h"
 
@@ -55,7 +54,6 @@ static mem_dma_t* admincq;
  */
 static void nvme_setup(int pci, int aqsize)
 {
-    if (log_open_stdout()) exit(1);
     memdev = mem_create(NULL, pci);
     if (!memdev) errx(1, "vfio_create");
 

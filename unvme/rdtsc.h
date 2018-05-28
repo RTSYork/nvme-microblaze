@@ -48,7 +48,6 @@
  */
 static inline uint64_t rdtsc(void)
 {
-//	printf("Time: %llu\r\n", timer_get_value());
 	return timer_get_value();
 }
 

@@ -184,7 +184,6 @@ int unvme_cmd(const unvme_ns_t* ns, int qid, int opc, int nsid,
 {
     unvme_iod_t iod = unvme_acmd(ns, qid, opc, nsid, buf, bufsz, cdw10_15);
     if (iod) {
-//        sched_yield();
         return unvme_apoll_cs(iod, UNVME_TIMEOUT, cqe_cs);
     }
     return -1;
@@ -203,7 +202,6 @@ int unvme_read(const unvme_ns_t* ns, int qid, void* buf, u64 slba, u32 nlb)
 {
     unvme_iod_t iod = unvme_aread(ns, qid, buf, slba, nlb);
     if (iod) {
-//        sched_yield();
         return unvme_apoll(iod, UNVME_TIMEOUT);
     }
     return -1;
@@ -223,7 +221,6 @@ int unvme_write(const unvme_ns_t* ns, int qid,
 {
     unvme_iod_t iod = unvme_awrite(ns, qid, buf, slba, nlb);
     if (iod) {
-//        sched_yield();
         return unvme_apoll(iod, UNVME_TIMEOUT);
     }
     return -1;
