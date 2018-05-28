@@ -93,8 +93,8 @@ typedef struct _unvme_iod {
 } *unvme_iod_t;
 
 // Export functions
-const unvme_ns_t* unvme_open(int pci, int nsid);
-const unvme_ns_t* unvme_openq(int pci, int nsid, int qcount, int qsize);
+const unvme_ns_t* unvme_open(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size);
+const unvme_ns_t* unvme_openq(int pci, int nsid, int qcount, int qsize, u64 mem_base_pci, void *mem_base_mb, size_t mem_size);
 int unvme_close(const unvme_ns_t* ns);
 
 void* unvme_alloc(const unvme_ns_t* ns, u64 size);

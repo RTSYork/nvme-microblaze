@@ -51,14 +51,14 @@
 /**
  * Main.
  */
-int unvme_api_test(int verbose, int ratio, int pci, int nsid)
+int unvme_api_test(int verbose, int ratio, int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
 {
 	printf("\r\nunvme_api_test test starting...\r\n\n");
 
     if (ratio < 1) ratio = 4;
 
     printf("API TEST BEGIN\n\r");
-    const unvme_ns_t* ns = unvme_open(pci, nsid);
+    const unvme_ns_t* ns = unvme_open(pci, nsid, mem_base_pci, mem_base_mb, mem_size);
     if (!ns) exit(1);
 
     // set large number of I/O and size

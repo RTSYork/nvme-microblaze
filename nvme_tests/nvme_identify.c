@@ -49,9 +49,9 @@ static mem_dma_t* admincq;
 /**
  * NVMe setup.
  */
-static void nvme_setup(int pci, int aqsize)
+static void nvme_setup(int pci, int aqsize, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
 {
-    memdev = mem_create(NULL, pci);
+    memdev = mem_create(NULL, pci, mem_base_pci, mem_base_mb, mem_size);
     if (!memdev) errx(1, "vfio_create");
 
     nvmedev = nvme_create(NULL);
@@ -148,13 +148,13 @@ void print_namespace(void* buf, int nsid)
 /**
  * Main program.
  */
-int nvme_identify(int pci)
+int nvme_identify(int pci, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
 {
 	printf("\r\n%s test starting...\r\n\n", __func__);
 
     int nsid = 0;
 
-    nvme_setup(pci, 8);
+    nvme_setup(pci, 8, mem_base_pci, mem_base_mb, mem_size);
     mem_dma_t* dma = mem_dma_alloc(memdev, 16384, 0);
     if (!dma) errx(1, "vfio_dma_alloc");
 

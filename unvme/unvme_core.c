@@ -442,7 +442,7 @@ static void unvme_cleanup(unvme_session_t* ses)
  * @param   qsize       size of each queue (0 default to 65)
  * @return  namespace pointer or NULL if error.
  */
-unvme_ns_t* unvme_do_open(int pci, int nsid, int qcount, int qsize)
+unvme_ns_t* unvme_do_open(int pci, int nsid, int qcount, int qsize, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
 {
     // check for existing opened device
     unvme_session_t* xses = unvme_ses;
@@ -468,7 +468,7 @@ unvme_ns_t* unvme_do_open(int pci, int nsid, int qcount, int qsize)
     } else {
         // setup controller namespace
         dev = zalloc(sizeof(unvme_device_t));
-        mem_create(&dev->memdev, pci);
+        mem_create(&dev->memdev, pci, mem_base_pci, mem_base_mb, mem_size);
         nvme_create(&dev->nvmedev);
         unvme_adminq_create(dev, 64);
 

@@ -132,7 +132,7 @@ typedef struct _unvme_session {
     unvme_ns_t              ns;         ///< namespace
 } unvme_session_t;
 
-unvme_ns_t* unvme_do_open(int pci, int nsid, int qcount, int qsize);
+unvme_ns_t* unvme_do_open(int pci, int nsid, int qcount, int qsize, u64 mem_base_pci, void *mem_base_mb, size_t mem_size);
 int unvme_do_close(const unvme_ns_t* ns);
 void* unvme_do_alloc(const unvme_ns_t* ns, u64 size);
 int unvme_do_free(const unvme_ns_t* ses, void* buf);

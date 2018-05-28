@@ -3,7 +3,7 @@
 #include "unvme/unvme.h"
 #include "timer.h"
 
-void read_benchmark() {
+void read_benchmark(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size) {
 	printf("\r\nRead benchmark running\r\n");
 
 	void *buf;
@@ -14,7 +14,7 @@ void read_benchmark() {
 	u64 blocks_per_io;
 	u64 size, size_per_io;
 
-	ns = unvme_openq(0x010000, 1, 1, 1024);
+	ns = unvme_openq(pci, nsid, 1, 1024, mem_base_pci, mem_base_mb, mem_size);
 
 	blocks_per_io = ns->maxbpio * ns->maxiopq;
 	size = ns->blocksize * blocks;
@@ -44,7 +44,7 @@ void read_benchmark() {
 	printf("\r\nRead benchmark done.\r\n");
 }
 
-void write_benchmark() {
+void write_benchmark(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size) {
 	printf("\r\nWrite benchmark running\r\n");
 
 	void *buf;
@@ -55,7 +55,7 @@ void write_benchmark() {
 	u64 blocks_per_io;
 	u64 size, size_per_io;
 
-	ns = unvme_openq(0x010000, 1, 1, 1024);
+	ns = unvme_openq(pci, nsid, 1, 1024, mem_base_pci, mem_base_mb, mem_size);
 
 	blocks_per_io = ns->maxbpio * ns->maxiopq;
 	size = ns->blocksize * blocks;

@@ -76,13 +76,14 @@ typedef struct _mem_device {
     __u64                   iovabase;   ///< IO virtual address base
     __u64                   iovanext;   ///< next IO virtual address to use
     __u64                   iovamask;   ///< max IO virtual address mask
-    mem_t*             memlist;    ///< memory allocated list
-    void*                   membuf;     ///< UIO buffer pointer
-    off_t                   memoff;  ///< UIO buffer offset
+    mem_t*                  memlist;    ///< memory allocated list
+    void*                   membuf;     ///< Memory buffer pointer
+    off_t                   memoff;     ///< Memory buffer offset
+    size_t                  memsize;    ///< Memory buffer size
 } mem_device_t;
 
 // Export functions
-mem_device_t* mem_create(mem_device_t* dev, int pci);
+mem_device_t* mem_create(mem_device_t* dev, int pci, u64 base_pci, void *base_mb, size_t size);
 void mem_delete(mem_device_t* dev);
 int mem_free(mem_t* mem);
 mem_dma_t* mem_dma_map(mem_device_t* dev, size_t size, void* pmb);

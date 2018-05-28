@@ -105,7 +105,7 @@ unvme_iod_t submit(int q, int d, void* buf, u64 lba, u32 nlb)
 /*
  * Main.
  */
-int unvme_wrc(int pci, int nsid, u32 rw_in, u64 pattern_in, u64 patinc_in, u64 startlba_in, u64 lbacount_in, u32 qcount_in, u32 qdepth_in, u32 nbpio_in, u64 dumptime_in)
+int unvme_wrc(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size, u32 rw_in, u64 pattern_in, u64 patinc_in, u64 startlba_in, u64 lbacount_in, u32 qcount_in, u32 qdepth_in, u32 nbpio_in, u64 dumptime_in)
 {
 /*
     const char* usage = "Usage: %s [OPTION]... PCINAME\n\
@@ -139,7 +139,7 @@ int unvme_wrc(int pci, int nsid, u32 rw_in, u64 pattern_in, u64 patinc_in, u64 s
 
     // open device and allocate buffer
     u64 tstart = timer_get_value();
-    ns = unvme_open(pci, nsid);
+    ns = unvme_open(pci, nsid, mem_base_pci, mem_base_mb, mem_size);
     if (!ns) exit(1);
     if ((startlba + lbacount) > ns->blockcount) {
         unvme_close(ns);

@@ -44,14 +44,14 @@
  * @param   qsize       io queue size
  * @return  namespace pointer or NULL if error.
  */
-const unvme_ns_t* unvme_openq(int pci, int nsid, int qcount, int qsize)
+const unvme_ns_t* unvme_openq(int pci, int nsid, int qcount, int qsize, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
 {
     if (qcount < 0 || qsize < 0 || qsize == 1) {
         ERROR("invalid qcount %d or qsize %d", qcount, qsize);
         return NULL;
     }
 
-    return unvme_do_open(pci, nsid, qcount, qsize);
+    return unvme_do_open(pci, nsid, qcount, qsize, mem_base_pci, mem_base_mb, mem_size);
 }
 
 /**
@@ -59,9 +59,9 @@ const unvme_ns_t* unvme_openq(int pci, int nsid, int qcount, int qsize)
  * @param   pciname     PCI device name (as %x:%x.%x[/NSID] format)
  * @return  namespace pointer or NULL if error.
  */
-const unvme_ns_t* unvme_open(int pci, int nsid)
+const unvme_ns_t* unvme_open(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
 {
-    return unvme_openq(pci, nsid, 0, 0);
+    return unvme_openq(pci, nsid, 0, 0, mem_base_pci, mem_base_mb, mem_size);
 }
 
 /**

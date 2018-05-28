@@ -47,11 +47,6 @@
 /// Print fatal error and exit
 #define FATAL(fmt, arg...)  do { ERROR(fmt, ##arg); abort(); } while (0)
 
-/// Starting device DMA address
-#define MEM_BASE 0xB0000000
-/// Size of buffer
-#define MEM_SIZE 0x10000000
-
 
 /**
  * Allocate memory memory.  The size will be rounded to page aligned size.
@@ -71,8 +66,8 @@ static mem_t* mem_alloc(mem_device_t* dev, size_t size, void* pmb, int clear)
     if (pmb) {
         mem->dma.buf = pmb;
     } else {
-        if (dev->memoff + size > MEM_SIZE) {
-            ERROR("Out of memory space (next allocation would use %#lx of %#lx)", dev->memoff + size, MEM_SIZE);
+        if (dev->memoff + size > dev->memsize) {
+            ERROR("Out of memory space (next allocation would use %#lx of %#lx)", dev->memoff + size, dev->memsize);
             free(mem);
             return NULL;
         }
@@ -191,7 +186,7 @@ int mem_dma_free(mem_dma_t* dma)
  * @param   pci         PCI device id (as %x:%x.%x format)
  * @return  device context or NULL if failure.
  */
-mem_device_t* mem_create(mem_device_t* dev, int pci)
+mem_device_t* mem_create(mem_device_t* dev, int pci, u64 base_pci, void *base_mb, size_t size)
 {
     DEBUG_FN("%x started", pci);
 
@@ -200,7 +195,7 @@ mem_device_t* mem_create(mem_device_t* dev, int pci)
     else dev->ext = 1;
     dev->pci = pci;
     dev->pagesize = 4096;
-    dev->iovabase = MEM_BASE;
+    dev->iovabase = base_pci;
     dev->iovanext = dev->iovabase;
 
 	pcie_ecam_enable();
@@ -229,7 +224,12 @@ mem_device_t* mem_create(mem_device_t* dev, int pci)
 			 pci, *vendor, *cmd,
 			 *(__u16*)(config + PCI_DEVICE_ID), config[PCI_REVISION_ID]);
 
-    dev->membuf = (void *)MEM_BASE;
+    dev->membuf = base_mb;
+    dev->memoff = 0;
+    dev->memsize = size;
+
+    DEBUG_FN("%x base_pci=%#x base_mb=%#x size=%#x",
+			 pci, base_pci, base_mb, size);
 
     return (mem_device_t*)dev;
 }
