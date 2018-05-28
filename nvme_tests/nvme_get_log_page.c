@@ -125,7 +125,7 @@ int nvme_get_log_page(int pci, int lid, int nsid)
     }
 
     nvme_setup(pci, 8);
-    vfio_dma_t* dma = vfio_dma_alloc(vfiodev, 8192, 0);
+    mem_dma_t* dma = mem_dma_alloc(memdev, 8192, 0);
     if (!dma) errx(1, "vfio_dma_alloc");
 
     int numd = dma->size / sizeof(u32) - 1;

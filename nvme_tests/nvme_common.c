@@ -39,14 +39,14 @@
 
 #include "nvme_tests.h"
 
-#include "../unvme/unvme_vfio.h"
+#include "../unvme/unvme_mem.h"
 #include "../unvme/unvme_nvme.h"
 #include "../unvme/unvme_log.h"
 
-static vfio_device_t* vfiodev;
+static mem_device_t* memdev;
 static nvme_device_t* nvmedev;
-static vfio_dma_t* adminsq;
-static vfio_dma_t* admincq;
+static mem_dma_t* adminsq;
+static mem_dma_t* admincq;
 
 #define errx(code, fmt, arg...) do { printf("error: " fmt "\n\r", ##arg); exit(code); } while (0)
 
@@ -56,15 +56,15 @@ static vfio_dma_t* admincq;
 static void nvme_setup(int pci, int aqsize)
 {
     if (log_open_stdout()) exit(1);
-    vfiodev = vfio_create(NULL, pci);
-    if (!vfiodev) errx(1, "vfio_create");
+    memdev = mem_create(NULL, pci);
+    if (!memdev) errx(1, "vfio_create");
 
     nvmedev = nvme_create(NULL);
     if (!nvmedev) errx(1, "nvme_create");
 
-    adminsq = vfio_dma_alloc(vfiodev, aqsize * sizeof(nvme_sq_entry_t), 1);
+    adminsq = mem_dma_alloc(memdev, aqsize * sizeof(nvme_sq_entry_t), 1);
     if (!adminsq) errx(1, "vfio_dma_alloc");
-    admincq = vfio_dma_alloc(vfiodev, aqsize * sizeof(nvme_cq_entry_t), 1);
+    admincq = mem_dma_alloc(memdev, aqsize * sizeof(nvme_cq_entry_t), 1);
     if (!admincq) errx(1, "vfio_dma_alloc");
 
     if (!nvme_adminq_setup(nvmedev, aqsize, adminsq->buf, adminsq->addr,
@@ -78,9 +78,9 @@ static void nvme_setup(int pci, int aqsize)
  */
 static void nvme_cleanup()
 {
-    vfio_dma_free(adminsq);
-    vfio_dma_free(admincq);
+    mem_dma_free(adminsq);
+    mem_dma_free(admincq);
     nvme_delete(nvmedev);
-    vfio_delete(vfiodev);
+    mem_delete(memdev);
 }
 

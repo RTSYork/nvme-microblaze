@@ -113,7 +113,7 @@ int nvme_identify(int pci)
     int nsid = 0;
 
     nvme_setup(pci, 8);
-    vfio_dma_t* dma = vfio_dma_alloc(vfiodev, 16384, 0);
+    mem_dma_t* dma = mem_dma_alloc(memdev, 16384, 0);
     if (!dma) errx(1, "vfio_dma_alloc");
 
     if (nvme_acmd_identify(nvmedev, 0, dma->addr, dma->addr + 4096))
@@ -140,7 +140,7 @@ int nvme_identify(int pci)
     }
 
     free(ctlr);
-    vfio_dma_free(dma);
+    mem_dma_free(dma);
     nvme_cleanup();
 
     printf("\r\n%s test complete\r\n\n", __func__);

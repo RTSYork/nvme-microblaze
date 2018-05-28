@@ -201,7 +201,7 @@ static u16 unvme_get_cid(unvme_desc_t* desc)
 static u64 unvme_map_dma(const unvme_ns_t* ns, void* buf, u64 bufsz)
 {
     unvme_device_t* dev = ((unvme_session_t*)ns->ses)->dev;
-    vfio_dma_t* dma = NULL;
+    mem_dma_t* dma = NULL;
 //    unvme_lockr(&dev->iomem.lock);
     int i;
     for (i = 0; i < dev->iomem.count; i++) {
@@ -294,9 +294,9 @@ static void unvme_queue_init(unvme_device_t* dev, unvme_queue_t* q, int qsize)
     q->size = qsize;
 
     // allocate queue entries and PRP list
-    q->sqdma = vfio_dma_alloc(&dev->vfiodev, qsize * sizeof(nvme_sq_entry_t), 1);
-    q->cqdma = vfio_dma_alloc(&dev->vfiodev, qsize * sizeof(nvme_cq_entry_t), 1);
-    q->prplist = vfio_dma_alloc(&dev->vfiodev, qsize << dev->ns.pageshift, 1);
+    q->sqdma = mem_dma_alloc(&dev->vfiodev, qsize * sizeof(nvme_sq_entry_t), 1);
+    q->cqdma = mem_dma_alloc(&dev->vfiodev, qsize * sizeof(nvme_cq_entry_t), 1);
+    q->prplist = mem_dma_alloc(&dev->vfiodev, qsize << dev->ns.pageshift, 1);
     if (!q->sqdma || !q->cqdma || !q->prplist)
         FATAL("vfio_dma_alloc");
 
@@ -328,9 +328,9 @@ static void unvme_queue_cleanup(unvme_queue_t* q)
     }
 
     if (q->cidmask) free(q->cidmask);
-    if (q->prplist) vfio_dma_free(q->prplist);
-    if (q->cqdma) vfio_dma_free(q->cqdma);
-    if (q->sqdma) vfio_dma_free(q->sqdma);
+    if (q->prplist) mem_dma_free(q->prplist);
+    if (q->cqdma) mem_dma_free(q->cqdma);
+    if (q->sqdma) mem_dma_free(q->sqdma);
 }
 
 /**
@@ -402,7 +402,7 @@ static void unvme_ns_init(unvme_ns_t* ns, int nsid)
     ns->id = nsid;
     ns->maxiopq = ns->qsize - 1;
 
-    vfio_dma_t* dma = vfio_dma_alloc(&dev->vfiodev, ns->pagesize, 1);
+    mem_dma_t* dma = mem_dma_alloc(&dev->vfiodev, ns->pagesize, 1);
 
     if (nvme_acmd_identify(&dev->nvmedev, nsid, dma->addr, 0))
         FATAL("nvme_acmd_identify %d failed", nsid);
@@ -414,7 +414,7 @@ static void unvme_ns_init(unvme_ns_t* ns, int nsid)
     ns->nbpp = 1 << ns->bpshift;
     ns->pagecount = ns->blockcount >> ns->bpshift;
     ns->maxbpio = ns->maxppio << ns->bpshift;
-    vfio_dma_free(dma);
+    mem_dma_free(dma);
 
     sprintf(ns->device + strlen(ns->device), "/%d", nsid);
     DEBUG_FN("%s qc=%d qd=%d bs=%d bc=%#lx mbio=%d", ns->device, ns->qcount,
@@ -433,7 +433,7 @@ static void unvme_cleanup(unvme_session_t* ses)
         for (q = 0; q < dev->ns.qcount; q++) unvme_ioq_delete(dev, q);
         unvme_adminq_delete(dev);
         nvme_delete(&dev->nvmedev);
-        vfio_delete(&dev->vfiodev);
+        mem_delete(&dev->vfiodev);
         free(dev->ioqs);
         free(dev);
     }
@@ -485,12 +485,12 @@ unvme_ns_t* unvme_do_open(int pci, int nsid, int qcount, int qsize)
     } else {
         // setup controller namespace
         dev = zalloc(sizeof(unvme_device_t));
-        vfio_create(&dev->vfiodev, pci);
+        mem_create(&dev->vfiodev, pci);
         nvme_create(&dev->nvmedev);
         unvme_adminq_create(dev, 64);
 
         // get controller info
-        vfio_dma_t* dma = vfio_dma_alloc(&dev->vfiodev, 4096, 1);
+        mem_dma_t* dma = mem_dma_alloc(&dev->vfiodev, 4096, 1);
         if (nvme_acmd_identify(&dev->nvmedev, 0, dma->addr, 0))
             FATAL("nvme_acmd_identify controller failed");
         nvme_identify_ctlr_t* idc = malloc(sizeof(nvme_identify_ctlr_t));
@@ -525,7 +525,7 @@ unvme_ns_t* unvme_do_open(int pci, int nsid, int qcount, int qsize)
             if (ns->maxppio > mp) ns->maxppio = mp;
         }
         free(idc);
-        vfio_dma_free(dma);
+        mem_dma_free(dma);
 
         // get max number of queues supported
         nvme_feature_num_queues_t nq;
@@ -590,7 +590,7 @@ void* unvme_do_alloc(const unvme_ns_t* ns, u64 size)
     void* buf = NULL;
 
 //    unvme_lockw(&iomem->lock);
-    vfio_dma_t* dma = vfio_dma_alloc(&dev->vfiodev, size, 0);
+    mem_dma_t* dma = mem_dma_alloc(&dev->vfiodev, size, 0);
     if (dma) {
         if (iomem->count == iomem->size) {
             iomem->size += 256;
@@ -619,7 +619,7 @@ int unvme_do_free(const unvme_ns_t* ns, void* buf)
     int i;
     for (i = 0; i < iomem->count; i++) {
         if (buf == iomem->map[i]->buf) {
-            vfio_dma_free(iomem->map[i]);
+            mem_dma_free(iomem->map[i]);
             iomem->count--;
             if (i != iomem->count)
                 iomem->map[i] = iomem->map[iomem->count];

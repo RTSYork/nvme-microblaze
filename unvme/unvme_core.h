@@ -42,8 +42,8 @@
 #include "unvme.h"
 #include "unvme_lock.h"
 #include "unvme_log.h"
+#include "unvme_mem.h"
 #include "unvme_nvme.h"
-#include "unvme_vfio.h"
 
 /// Doubly linked list add node
 #define LIST_ADD(head, node)                                    \
@@ -75,7 +75,7 @@ typedef char unvme_page_t[4096];
 
 /// IO memory allocation tracking info
 typedef struct _unvme_iomem {
-    vfio_dma_t**            map;        ///< dynamic array of allocated memory
+    mem_dma_t**            map;        ///< dynamic array of allocated memory
     int                     size;       ///< array size
     int                     count;      ///< array count
 //    unvme_lock_t            lock;       ///< map access lock
@@ -101,9 +101,9 @@ typedef struct _unvme_desc {
 /// IO queue entry
 typedef struct _unvme_queue {
     nvme_queue_t*           nvmeq;      ///< NVMe associated queue
-    vfio_dma_t*             sqdma;      ///< submission queue mem
-    vfio_dma_t*             cqdma;      ///< completion queue mem
-    vfio_dma_t*             prplist;    ///< PRP list
+    mem_dma_t*             sqdma;      ///< submission queue mem
+    mem_dma_t*             cqdma;      ///< completion queue mem
+    mem_dma_t*             prplist;    ///< PRP list
     u32                     size;       ///< queue depth
     u16                     cid;        ///< next cid to check and use
     int                     cidcount;   ///< number of pending cids
@@ -117,7 +117,7 @@ typedef struct _unvme_queue {
 
 /// Device context
 typedef struct _unvme_device {
-    vfio_device_t           vfiodev;    ///< VFIO device
+    mem_device_t           vfiodev;    ///< VFIO device
     nvme_device_t           nvmedev;    ///< NVMe device
     unvme_queue_t           adminq;     ///< adminq queue
     int                     refcount;   ///< reference count

@@ -61,7 +61,7 @@ int nvme_get_features(int pci)
     int nsid = 1;
 
     nvme_setup(pci, 8);
-    vfio_dma_t* dma = vfio_dma_alloc(vfiodev, sizeof(nvme_feature_lba_data_t), 0);
+    mem_dma_t* dma = mem_dma_alloc(memdev, sizeof(nvme_feature_lba_data_t), 0);
     if (!dma) errx(1, "vfio_dma_alloc");
     u32 res;
 

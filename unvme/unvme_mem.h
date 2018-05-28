@@ -31,16 +31,15 @@
 
 /**
  * @file
- * @brief VFIO function support header files.
+ * @brief Memory function support header files.
  */
 
 #ifndef _UNVME_VFIO_H
-#define _UNVME_VFIO_H
+#define _UNVME_MEM_H
 
 #include <stdlib.h>
 #include <pthread.h>
 #include "xil_types.h"
-//#include <linux/vfio.h>
 
 typedef s8 __s8;
 typedef s16 __s16;
@@ -51,54 +50,45 @@ typedef u16 __u16;
 typedef u32 __u32;
 typedef u64 __u64;
 
-/// VFIO dma allocation structure
-typedef struct _vfio_dma {
+/// dma allocation structure
+typedef struct _mem_dma {
     void*                   buf;        ///< memory buffer
     size_t                  size;       ///< allocated size
     __u64                   addr;       ///< I/O DMA address
-    struct _vfio_mem*       mem;        ///< private mem
-} vfio_dma_t;
+    struct _mem*       mem;        ///< private mem
+} mem_dma_t;
 
-/// VFIO memory allocation entry
-typedef struct _vfio_mem {
-    struct _vfio_device*    dev;        ///< device owner
+/// memory allocation entry
+typedef struct _mem {
+    struct _mem_device*    dev;        ///< device owner
     int                     mmap;       ///< mmap indication flag
-    vfio_dma_t              dma;        ///< dma mapped memory
+    mem_dma_t              dma;        ///< dma mapped memory
     size_t                  size;       ///< size
-    struct _vfio_mem*       prev;       ///< previous entry
-    struct _vfio_mem*       next;       ///< next entry
-} vfio_mem_t;
+    struct _mem*       prev;       ///< previous entry
+    struct _mem*       next;       ///< next entry
+} mem_t;
 
-/// VFIO device structure
-typedef struct _vfio_device {
+/// device structure
+typedef struct _mem_device {
     int                     pci;        ///< PCI device number
-//    int                     fd;         ///< device descriptor
-//    int                     groupfd;    ///< group file descriptor
-//    int                     contfd;     ///< container file descriptor
-    int                     msixsize;   ///< max MSIX table size
-    int                     msixnvec;   ///< number of enabled MSIX vectors
     int                     pagesize;   ///< system page size
     int                     ext;        ///< externally allocated flag
     __u64                   iovabase;   ///< IO virtual address base
     __u64                   iovanext;   ///< next IO virtual address to use
     __u64                   iovamask;   ///< max IO virtual address mask
-//    pthread_mutex_t         lock;       ///< multithreaded lock
-    vfio_mem_t*             memlist;    ///< memory allocated list
-//    int                     uiofd;      ///< file descriptor of UIO device
-    void*                   uiobuf;     ///< UIO buffer pointer
-    off_t                   uiobufoff;  ///< UIO buffer offset
-} vfio_device_t;
+    mem_t*             memlist;    ///< memory allocated list
+    void*                   membuf;     ///< UIO buffer pointer
+    off_t                   memoff;  ///< UIO buffer offset
+} mem_device_t;
 
 // Export functions
-vfio_device_t* vfio_create(vfio_device_t* dev, int pci);
-void vfio_delete(vfio_device_t* dev);
-//void vfio_msix_enable(vfio_device_t* dev, int start, int nvec, __s32* efds);
-//void vfio_msix_disable(vfio_device_t* dev);
-int vfio_mem_free(vfio_mem_t* mem);
-vfio_dma_t* vfio_dma_map(vfio_device_t* dev, size_t size, void* pmb);
-int vfio_dma_unmap(vfio_dma_t* dma);
-vfio_dma_t* vfio_dma_alloc(vfio_device_t* dev, size_t size, int clear);
-int vfio_dma_free(vfio_dma_t* dma);
+mem_device_t* mem_create(mem_device_t* dev, int pci);
+void mem_delete(mem_device_t* dev);
+int mem_free(mem_t* mem);
+mem_dma_t* mem_dma_map(mem_device_t* dev, size_t size, void* pmb);
+int mem_dma_unmap(mem_dma_t* dma);
+mem_dma_t* mem_dma_alloc(mem_device_t* dev, size_t size, int clear);
+int mem_dma_free(mem_dma_t* dma);
 
-#endif // _UNVME_VFIO_H
+#endif // _UNVME_MEM_H
 
