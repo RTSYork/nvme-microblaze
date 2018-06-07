@@ -34,7 +34,7 @@
  * @brief Memory function support header files.
  */
 
-#ifndef _UNVME_VFIO_H
+#ifndef _UNVME_MEM_H
 #define _UNVME_MEM_H
 
 #include <stdlib.h>
