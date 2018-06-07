@@ -72,73 +72,14 @@
 /// Page size
 typedef char unvme_page_t[4096];
 
-/// IO memory allocation tracking info
-typedef struct _unvme_iomem {
-    mem_dma_t**            map;        ///< dynamic array of allocated memory
-    int                     size;       ///< array size
-    int                     count;      ///< array count
-} unvme_iomem_t;
 
-/// IO full descriptor
-typedef struct _unvme_desc {
-    void*                   buf;        ///< buffer
-    u64                     slba;       ///< starting lba
-    u32                     nlb;        ///< number of blocks
-    u32                     qid;        ///< queue id
-    u32                     opc;        ///< op code
-    u32                     id;         ///< descriptor id
-    void*                   sentinel;   ///< sentinel check
-    struct _unvme_queue*    q;          ///< queue context owner
-    struct _unvme_desc*     prev;       ///< previous descriptor node
-    struct _unvme_desc*     next;       ///< next descriptor node
-    int                     error;      ///< error status
-    int                     cidcount;   ///< number of pending cids
-    u64                     cidmask[];  ///< cid pending bit mask
-} unvme_desc_t;
-
-/// IO queue entry
-typedef struct _unvme_queue {
-    nvme_queue_t*           nvmeq;      ///< NVMe associated queue
-    mem_dma_t*             sqdma;      ///< submission queue mem
-    mem_dma_t*             cqdma;      ///< completion queue mem
-    mem_dma_t*             prplist;    ///< PRP list
-    u32                     size;       ///< queue depth
-    u16                     cid;        ///< next cid to check and use
-    int                     cidcount;   ///< number of pending cids
-    int                     desccount;  ///< number of pending descriptors
-    int                     masksize;   ///< bit mask size to allocate
-    u64*                    cidmask;    ///< cid pending bit mask
-    unvme_desc_t*           desclist;   ///< used descriptor list
-    unvme_desc_t*           descfree;   ///< free descriptor list
-    unvme_desc_t*           descpend;   ///< pending descriptor list
-} unvme_queue_t;
-
-/// Device context
-typedef struct _unvme_device {
-    mem_device_t            memdev;     ///< memory device
-    nvme_device_t           nvmedev;    ///< NVMe device
-    unvme_queue_t           adminq;     ///< adminq queue
-    int                     refcount;   ///< reference count
-    unvme_iomem_t           iomem;      ///< IO memory tracker
-    unvme_ns_t              ns;         ///< controller namespace (id=0)
-    unvme_queue_t*          ioqs;       ///< pointer to IO queues
-} unvme_device_t;
-
-/// Session context
-typedef struct _unvme_session {
-    struct _unvme_session*  prev;       ///< previous session node
-    struct _unvme_session*  next;       ///< next session node
-    unvme_device_t*         dev;        ///< device context
-    unvme_ns_t              ns;         ///< namespace
-} unvme_session_t;
-
-unvme_ns_t* unvme_do_open(int pci, int nsid, int qcount, int qsize, u64 mem_base_pci, void *mem_base_mb, size_t mem_size);
-int unvme_do_close(const unvme_ns_t* ns);
-void* unvme_do_alloc(const unvme_ns_t* ns, u64 size);
-int unvme_do_free(const unvme_ns_t* ses, void* buf);
+int unvme_do_open(unvme_device_t* dev, int pci, int nsid, int qcount, int qsize, u64 mem_base_pci, void *mem_base_mb, size_t mem_size);
+int unvme_do_close(unvme_device_t* dev);
+void* unvme_do_alloc(unvme_device_t* dev, u64 size);
+int unvme_do_free(unvme_device_t* dev, void* buf);
 int unvme_do_poll(unvme_desc_t* desc, int sec, u32* cqe_cs);
-unvme_desc_t* unvme_do_cmd(const unvme_ns_t* ns, int qid, int opc, int nsid, void* buf, u64 bufsz, u32 cdw10_15[6]);
-unvme_desc_t* unvme_do_rw(const unvme_ns_t* ns, int qid, int opc, void* buf, u64 slba, u32 nlb);
+unvme_desc_t* unvme_do_cmd(unvme_device_t* dev, int qid, int opc, int nsid, void* buf, u64 bufsz, u32 cdw10_15[6]);
+unvme_desc_t* unvme_do_rw(unvme_device_t* dev, int qid, int opc, void* buf, u64 slba, u32 nlb);
 
 #endif  // _UNVME_CORE_H
 
