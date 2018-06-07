@@ -18,8 +18,7 @@ _HEAP_SIZE = DEFINED(_HEAP_SIZE) ? _HEAP_SIZE : 0x100000;
 MEMORY
 {
    mb_microblaze_0_local_memory_ilmb_bram_if_cntlr_Mem_mb_microblaze_0_local_memory_dlmb_bram_if_cntlr_Mem : ORIGIN = 0x80000050, LENGTH = 0x1FFFB0
-   ddr_ddr4_0_C0_DDR4_ADDRESS_BLOCK : ORIGIN = 0xB0000000, LENGTH = 0x10000000
-   psu_ddr_0_HPC0_AXI_BASENAME_MEM_0 : ORIGIN = 0x0, LENGTH = 0x80000000
+   ddr_ddr4_0_C0_DDR4_ADDRESS_BLOCK : ORIGIN = 0x0, LENGTH = 0x80000000
    psu_qspi_linear_0_MEM_0 : ORIGIN = 0xC0000000, LENGTH = 0x20000000
    psu_pcie_low_HPC0_AXI_BASENAME_MEM_0 : ORIGIN = 0xE0000000, LENGTH = 0x10000000
    psu_ocm_ram_0_HPC0_AXI_BASENAME_MEM_0 : ORIGIN = 0xFFFC0000, LENGTH = 0x40000

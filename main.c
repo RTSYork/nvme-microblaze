@@ -7,9 +7,9 @@
 #include "nvme_tests/nvme_tests.h"
 #include "benchmark.h"
 
-#define MEM_BASE_MB (void *)0xB0000000
-#define MEM_BASE_PCI 0xB0000000
-#define MEM_SIZE 0x10000000
+#define MEM_BASE_MB (void *)0x00000000
+#define MEM_BASE_PCI 0x500000000
+#define MEM_SIZE 0x80000000
 
 XTmrCtr timer;
 
