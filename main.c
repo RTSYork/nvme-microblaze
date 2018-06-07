@@ -20,7 +20,7 @@ int main()
 	init_platform();
 
 	printf("\n\r***********************************************************\n\r");
-	printf("NVMe test\n\r");
+	printf("NVMe test with static memory\n\r");
 
 //	pvr_t pvr;
 //	microblaze_get_pvr(&pvr);
