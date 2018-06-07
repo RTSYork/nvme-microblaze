@@ -68,8 +68,8 @@ int main()
 	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'w', 0, 1, 0, 0x10000, 0, 0, 0, 2)) goto error;
 	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'r', 0, 0, 0, 0x10000, 0, 0, 0, 2)) goto error;
 
-	read_benchmark(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE);
-	write_benchmark(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE);
+	if (read_benchmark(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error;
+	if (write_benchmark(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error;
 
 	cleanup_platform();
 	return 0;

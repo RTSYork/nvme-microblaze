@@ -3,7 +3,7 @@
 #include "unvme/unvme.h"
 #include "timer.h"
 
-void read_benchmark(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size) {
+int read_benchmark(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size) {
 	printf("\r\nRead benchmark running\r\n");
 
 	void *buf;
@@ -15,12 +15,21 @@ void read_benchmark(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size
 	u64 size, size_per_io;
 
 	ns = unvme_openq(pci, nsid, 1, 1024, mem_base_pci, mem_base_mb, mem_size);
+	if (!ns) {
+		printf("\r\nError opening device\r\n");
+		return 1;
+	};
 
 	blocks_per_io = ns->maxbpio * ns->maxiopq;
 	size = ns->blocksize * blocks;
 	size_per_io = ns->blocksize * blocks_per_io;
 
 	buf = unvme_alloc(ns, size_per_io);
+	if (!buf) {
+		printf("\r\nError allocating memory\r\n");
+		unvme_close(ns);
+		return 1;
+	};
 
 	start = timer_get_value();
 	for (int i = 0; i < blocks; i += blocks_per_io) {
@@ -42,9 +51,10 @@ void read_benchmark(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size
 	unvme_close(ns);
 
 	printf("\r\nRead benchmark done.\r\n");
+	return 0;
 }
 
-void write_benchmark(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size) {
+int write_benchmark(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size) {
 	printf("\r\nWrite benchmark running\r\n");
 
 	void *buf;
@@ -56,12 +66,21 @@ void write_benchmark(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, siz
 	u64 size, size_per_io;
 
 	ns = unvme_openq(pci, nsid, 1, 1024, mem_base_pci, mem_base_mb, mem_size);
+	if (!ns) {
+		printf("\r\nError opening device\r\n");
+		return 1;
+	};
 
 	blocks_per_io = ns->maxbpio * ns->maxiopq;
 	size = ns->blocksize * blocks;
 	size_per_io = ns->blocksize * blocks_per_io;
 
 	buf = unvme_alloc(ns, size_per_io);
+	if (!buf) {
+		printf("\r\nError allocating memory\r\n");
+		unvme_close(ns);
+		return 1;
+	};
 
 	start = timer_get_value();
 	for (int i = 0; i < blocks; i += blocks_per_io) {
@@ -83,4 +102,5 @@ void write_benchmark(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, siz
 	unvme_close(ns);
 
 	printf("\r\nWrite benchmark done.\r\n");
+	return 0;
 }
