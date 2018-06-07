@@ -68,15 +68,17 @@ int main()
 	if (nvme_get_log_page(0x010000, 3, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error; // firmware slot information
 	printf("\r\nDone\n\r");
 
-//	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'w', 0, 0, 0, 0x1000000, 0, 0, 0, 0)) goto error;
-//	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'r', 0, 0, 0, 0x1000, 0, 0, 0, 0)) goto error;
-//	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'r', 0, 0, 0, 0x10000, 0, 0, 0, 0)) goto error;
-//	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'r', 0, 0, 0, 0x100000, 0, 0, 0, 0)) goto error;
-//	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'r', 0, 0, 0, 0x1000000, 0, 0, 0, 10)) goto error;
-//	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'r', 0, 1, 0, 0x100000, 0, 0, 0, 10)) goto error;
+////	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'w', 0, 0, 0, 0x1000000, 0, 0, 0, 0)) goto error;
+////	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'r', 0, 0, 0, 0x1000, 0, 0, 0, 0)) goto error;
+////	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'r', 0, 0, 0, 0x10000, 0, 0, 0, 0)) goto error;
+////	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'r', 0, 0, 0, 0x100000, 0, 0, 0, 0)) goto error;
+////	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'r', 0, 0, 0, 0x1000000, 0, 0, 0, 10)) goto error;
+////	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'r', 0, 1, 0, 0x100000, 0, 0, 0, 10)) goto error;
 
 	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'w', 0, 1, 0, 0x10000, 0, 0, 0, 2)) goto error;
-	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'r', 0, 0, 0, 0x10000, 0, 0, 0, 2)) goto error;
+	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'r', 0, 1, 0, 0x10000, 0, 0, 0, 2)) goto error;
+	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'w', 0, 1, 0, 0x10000, 31, 0, 0, 2)) goto error;
+	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'r', 0, 1, 0, 0x10000, 31, 0, 0, 2)) goto error;
 
 	if (read_benchmark(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error;
 	if (write_benchmark(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error;
