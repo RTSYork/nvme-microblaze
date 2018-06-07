@@ -55,13 +55,15 @@ int unvme_sim_test(u64 lba, u64 size, int pci, int nsid, u64 mem_base_pci, void 
     u64 slba = (lba > 0) ? lba : -1L;
 
     printf("SIMPLE WRITE-READ-VERIFY TEST BEGIN\n\r");
-    const unvme_ns_t* ns = unvme_open(pci, nsid, mem_base_pci, mem_base_mb, mem_size);
-    if (!ns) exit(1);
+    unvme_device_t dev;
+    int ret = unvme_open(&dev, pci, nsid, mem_base_pci, mem_base_mb, mem_size);
+    if (ret) exit(1);
+    unvme_ns_t *ns = &dev.nsio;
     printf("%s qc=%ld/%ld qs=%ld/%ld bc=%#llx bs=%d mbio=%d ds=%#llx\n\r",
             ns->device, ns->qcount, ns->maxqcount, ns->qsize, ns->maxqsize,
             ns->blockcount, ns->blocksize, ns->maxbpio, datasize);
 
-    void* buf = unvme_alloc(ns, datasize);
+    void* buf = unvme_alloc(&dev, datasize);
     if (!buf) {
     	printf("error: unvme_alloc %lld failed\r\n", datasize);
     	return 1;
@@ -88,13 +90,13 @@ int unvme_sim_test(u64 lba, u64 size, int pci, int nsid, u64 mem_base_pci, void 
             u64 pat = (q << 24) + w;
             p[w] = (pat << 32) | (~pat & 0xffffffff);
         }
-        stat = unvme_write(ns, q, p, slba, nlb);
+        stat = unvme_write(&dev, q, p, slba, nlb);
         if (stat) {
         	printf("error: unvme_write failed: slba=%#llx nlb=%#llx stat=%#x\r\n", slba, nlb, stat);
             return 1;
         }
         for (int i = 0; i < (nlb * ns->blocksize) / sizeof(u64); i++) p[i] = 0;
-        stat = unvme_read(ns, q, p, slba, nlb);
+        stat = unvme_read(&dev, q, p, slba, nlb);
         if (stat) {
         	printf("error: unvme_read failed: slba=%#llx nlb=%#llx stat=%#x\r\n", slba, nlb, stat);
 			return 1;
@@ -114,8 +116,8 @@ int unvme_sim_test(u64 lba, u64 size, int pci, int nsid, u64 mem_base_pci, void 
         if (slba >= ns->blockcount) slba = 0;
     }
 
-    unvme_free(ns, buf);
-    unvme_close(ns);
+    unvme_free(&dev, buf);
+    unvme_close(&dev);
 
     printf("SIMPLE WRITE-READ-VERIFY TEST COMPLETE (%lld secs)\n\r", (timer_get_value() - tstart) / TIMER_TICKS_PER_SECOND);
 

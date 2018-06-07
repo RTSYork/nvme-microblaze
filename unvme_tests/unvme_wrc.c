@@ -23,6 +23,7 @@
 #define PDEBUG(fmt, arg...)     //fprintf(stderr, fmt "\n", ##arg)
 
 // Global static variables
+static unvme_device_t dev; ///< namespace handle
 static const unvme_ns_t* ns;    ///< namespace handle
 static u32 rw = 0;              ///< read-write flag
 static u64 startlba = 0;        ///< starting LBA
@@ -92,11 +93,11 @@ unvme_iod_t submit(int q, int d, void* buf, u64 lba, u32 nlb)
             }
         }
         PDEBUG("@W q%d.%d %p %#lx %d", q, d, buf, lba, nlb);
-        iod = unvme_awrite(ns, q, buf, lba, nlb);
+        iod = unvme_awrite(&dev, q, buf, lba, nlb);
         if (!iod) errx(1, "unvme_awrite q=%d lba=%#llx nlb=%#lx failed", q, lba, nlb);
     } else {
         PDEBUG("@R q%d.%d %p %#lx %d", q,  d, buf, lba, nlb);
-        iod = unvme_aread(ns, q, buf, lba, nlb);
+        iod = unvme_aread(&dev, q, buf, lba, nlb);
         if (!iod) errx(1, "unvme_aread q=%d lba=%#llx nlb=%#lx failed", q, lba, nlb);
     }
     return iod;
@@ -139,20 +140,21 @@ int unvme_wrc(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem
 
     // open device and allocate buffer
     u64 tstart = timer_get_value();
-    ns = unvme_open(pci, nsid, mem_base_pci, mem_base_mb, mem_size);
-    if (!ns) exit(1);
+    int ret = unvme_open(&dev, pci, nsid, mem_base_pci, mem_base_mb, mem_size);
+    if (ret) exit(1);
+    ns = &dev.nsio;
     if ((startlba + lbacount) > ns->blockcount) {
-        unvme_close(ns);
+        unvme_close(&dev);
         errx(1, "max block count is %#llx", ns->blockcount);
     }
     if (qcount > ns->qcount || qdepth >= ns->qsize) {
-        unvme_close(ns);
+        unvme_close(&dev);
         errx(1, "max qcount=%ld qdepth=%ld", ns->qcount, ns->qsize-1);
     }
     if (lbacount == 0) lbacount = ns->blockcount - startlba;
     if (nbpio == 0) nbpio = ns->maxbpio;
     if (nbpio > ns->maxbpio || (nbpio % ns->nbpp)) {
-        unvme_close(ns);
+        unvme_close(&dev);
         errx(1, "invalid nbpio %ld", nbpio);
     }
 
@@ -166,7 +168,7 @@ int unvme_wrc(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem
 
     int iobufsize = nbpio * ns->blocksize;
     for (i = 0; i < iomax; i++) {
-        iobufs[i] = unvme_alloc(ns, iobufsize);
+        iobufs[i] = unvme_alloc(&dev, iobufsize);
         if (!iobufs[i]) errx(1, "unvme_alloc %#x failed", iobufsize);
     }
 
@@ -311,11 +313,11 @@ int unvme_wrc(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem
         }
     }
 
-    for (i = 0; i < iomax; i++) unvme_free(ns, iobufs[i]);
+    for (i = 0; i < iomax; i++) unvme_free(&dev, iobufs[i]);
     free(fixedbuf);
     free(iobufs);
     free(iods);
-    unvme_close(ns);
+    unvme_close(&dev);
 
     if (!mismatch) printf("Completion time: %lld seconds\n", (timer_get_value() - tstart) / TIMER_TICKS_PER_SECOND);
 

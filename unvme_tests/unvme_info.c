@@ -48,7 +48,9 @@ int unvme_info(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t me
 {
 	printf("\r\nunvme_info test starting...\r\n\n");
 
-    const unvme_ns_t* ns = unvme_open(pci, nsid, mem_base_pci, mem_base_mb, mem_size);
+	unvme_device_t dev;
+    unvme_open(&dev, pci, nsid, mem_base_pci, mem_base_mb, mem_size);
+    unvme_ns_t *ns = &dev.nsio;
     printf("Namespace:               %d (of %d)\n", ns->id, ns->nscount);
     printf("Vendor ID:               %#x\n", ns->vid);
     printf("Model number:            %.40s\n", ns->mn);
@@ -64,7 +66,7 @@ int unvme_info(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t me
     printf("Default IO queue size:   %ld\n", ns->qsize);
     printf("Max IO queue count:      %ld\n", ns->maxqcount);
     printf("Max IO queue size:       %ld\n", ns->maxqsize);
-    unvme_close(ns);
+    unvme_close(&dev);
 
     printf("\r\nunvme_info test complete\r\n");
 
