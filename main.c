@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <sleep.h>
 #include "platform.h"
+#include "mb_interface.h"
+#include "pvr.h"
 #include "timer.h"
 #include "pcie.h"
 #include "unvme_tests/unvme_tests.h"
@@ -19,6 +21,14 @@ int main()
 
 	printf("\n\r***********************************************************\n\r");
 	printf("NVMe test\n\r");
+
+//	pvr_t pvr;
+//	microblaze_get_pvr(&pvr);
+//	u32 use_mmu = MICROBLAZE_PVR_USE_MMU(pvr);
+//	u32 mmu_type = MICROBLAZE_PVR_MMU_TYPE(pvr);
+//	u32 msr = mfmsr();
+//	printf("use_mmu = 0x%08lx, mmu_type = 0x%08lx, msr = 0x%08lx\r\n", use_mmu, mmu_type, msr);
+//	return 0;
 
 	pcie_setup();
 
