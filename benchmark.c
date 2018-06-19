@@ -14,7 +14,7 @@ int read_benchmark(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_
 	u64 size, size_per_io;
 
     unvme_device_t dev;
-	if (unvme_openq(&dev, pci, nsid, 1, 1024, mem_base_pci, mem_base_mb, mem_size)) {
+	if (unvme_openq(&dev, pci, nsid, mem_base_pci, mem_base_mb, mem_size)) {
 		printf("\r\nError opening device\r\n");
 		return 1;
 	};
@@ -65,7 +65,7 @@ int write_benchmark(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size
 	u64 size, size_per_io;
 
     unvme_device_t dev;
-	if (unvme_openq(&dev, pci, nsid, 1, 1024, mem_base_pci, mem_base_mb, mem_size)) {
+	if (unvme_openq(&dev, pci, nsid, mem_base_pci, mem_base_mb, mem_size)) {
 		printf("\r\nError opening device\r\n");
 		return 1;
 	};

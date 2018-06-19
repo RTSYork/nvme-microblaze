@@ -108,10 +108,11 @@ static int unvme_check_completion(unvme_queue_t* q, int timeout, u32* cqe_cs)
     // wait for completion
     int err, cid;
     u64 endtsc = 0;
+    nvme_queue_t *nvmeq = (q->isadmin) ? q->adminq : &q->nvmeq;
     do {
-        cid = nvme_check_completion(q->nvmeq, &err, cqe_cs);
+        cid = nvme_check_completion(nvmeq, &err, cqe_cs);
         if (timeout == 0 || cid >= 0) break;
-        else endtsc = rdtsc() + (u64)timeout * q->nvmeq->dev->rdtsec;
+        else endtsc = rdtsc() + (u64)timeout * nvmeq->dev->rdtsec;
     } while (rdtsc() < endtsc);
 
     if (cid < 0) return cid;
@@ -159,8 +160,8 @@ static u16 unvme_get_cid(unvme_desc_t* desc)
     if ((q->cidcount + 1) == qsize) {
         int err = unvme_check_completion(q, UNVME_TIMEOUT, NULL);
         if (err) {
-            if (err == -1) FATAL("q%d timeout", q->nvmeq->id);
-            else ERROR("q%d error %#x", q->nvmeq->id, err);
+            if (err == -1) FATAL("q%d timeout", q->nvmeq.id);
+            else ERROR("q%d error %#x", q->nvmeq.id, err);
         }
     }
 
@@ -260,7 +261,7 @@ static int unvme_submit_io(const unvme_device_t* dev, unvme_desc_t* desc,
     if (unvme_map_prps(dev, ioq, cid, buf, bufsz, &prp1, &prp2)) return -1;
 
     // submit I/O command
-    if (nvme_cmd_rw(ioq->nvmeq, desc->opc, cid,
+    if (nvme_cmd_rw(&ioq->nvmeq, desc->opc, cid,
                     dev->nsio.id, slba, nlb, prp1, prp2)) return -1;
     PDEBUG("# %c %#lx %#x q%d={%d %d %#lx} d={%d %d %#lx}",
            desc->opc == NVME_CMD_READ ? 'r' : 'w', slba, nlb,
@@ -289,7 +290,6 @@ static void unvme_queue_init(unvme_device_t* dev, unvme_queue_t* q, int qsize)
 
     // setup descriptors and pending masks
     q->masksize = ((qsize + 63) >> 6) << 3; // (qsize + 63) / 64) * sizeof(u64)
-    q->cidmask = zalloc(q->masksize);
     int i;
     for (i = 0; i < 16; i++) unvme_desc_get(q);
     q->descfree = q->desclist;
@@ -314,7 +314,6 @@ static void unvme_queue_cleanup(unvme_queue_t* q)
         free(desc);
     }
 
-    if (q->cidmask) free(q->cidmask);
     if (q->prplist) mem_dma_free(q->prplist);
     if (q->cqdma) mem_dma_free(q->cqdma);
     if (q->sqdma) mem_dma_free(q->sqdma);
@@ -330,11 +329,12 @@ static void unvme_adminq_create(unvme_device_t* dev, int qsize)
     DEBUG_FN("%x", dev->memdev.pci);
     unvme_queue_t* adminq = &dev->adminq;
     unvme_queue_init(dev, adminq, qsize);
+    adminq->isadmin = 1;
     if (!nvme_adminq_setup(&dev->nvmedev, qsize,
                            adminq->sqdma->buf, adminq->sqdma->addr,
                            adminq->cqdma->buf, adminq->cqdma->addr))
         FATAL("nvme_setup_adminq failed");
-    adminq->nvmeq = &dev->nvmedev.adminq;
+    adminq->adminq = &dev->nvmedev.adminq;
 }
 
 /**
@@ -355,14 +355,14 @@ static void unvme_adminq_delete(unvme_device_t* dev)
 static void unvme_ioq_create(unvme_device_t* dev, int q)
 {
     DEBUG_FN("%x q=%d", dev->memdev.pci, q+1);
-    unvme_queue_t* ioq = dev->ioqs + q;
+    unvme_queue_t* ioq = &dev->ioqs[q];
     unvme_queue_init(dev, ioq, dev->nscnt.qsize);
-    if (!(ioq->nvmeq = nvme_ioq_create(&dev->nvmedev, NULL, q+1, ioq->size,
+    if (nvme_ioq_create(&dev->nvmedev, &ioq->nvmeq, q+1, ioq->size,
                                        ioq->sqdma->buf, ioq->sqdma->addr,
-                                       ioq->cqdma->buf, ioq->cqdma->addr)))
+                                       ioq->cqdma->buf, ioq->cqdma->addr))
         FATAL("nvme_ioq_create %d failed", q+1);
-    DEBUG_FN("%x q=%d qd=%d db=%#04lx", dev->memdev.pci, ioq->nvmeq->id,
-             ioq->size, (u32)ioq->nvmeq->sq_doorbell - (u32)dev->nvmedev.reg);
+    DEBUG_FN("%x q=%d qd=%d db=%#04lx", dev->memdev.pci, ioq->nvmeq.id,
+             ioq->size, (u32)ioq->nvmeq.sq_doorbell - (u32)dev->nvmedev.reg);
 }
 
 /**
@@ -373,8 +373,8 @@ static void unvme_ioq_create(unvme_device_t* dev, int q)
 static void unvme_ioq_delete(unvme_device_t* dev, int q)
 {
     DEBUG_FN("%x %d", dev->memdev.pci, q+1);
-    unvme_queue_t* ioq = dev->ioqs + q;
-    (void)nvme_ioq_delete(ioq->nvmeq);
+    unvme_queue_t* ioq = &dev->ioqs[q];
+    (void)nvme_ioq_delete(&ioq->nvmeq);
     unvme_queue_cleanup(ioq);
 }
 
@@ -420,8 +420,6 @@ static void unvme_cleanup(unvme_device_t* dev)
         unvme_adminq_delete(dev);
         nvme_delete(&dev->nvmedev);
         mem_delete(&dev->memdev);
-        free(dev->ioqs);
-//        free(dev);
     }
 }
 
@@ -434,7 +432,7 @@ static void unvme_cleanup(unvme_device_t* dev)
  * @param   qsize       size of each queue (0 default to 65)
  * @return  namespace pointer or NULL if error.
  */
-int unvme_do_open(unvme_device_t* dev, int pci, int nsid, int qcount, int qsize, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
+int unvme_do_open(unvme_device_t* dev, int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
 {
 	// setup controller namespace
 	memset(dev, 0, sizeof(*dev));
@@ -485,17 +483,16 @@ int unvme_do_open(unvme_device_t* dev, int pci, int nsid, int qcount, int qsize,
 	if (nvme_acmd_get_features(&dev->nvmedev, 0,
 							   NVME_FEATURE_NUM_QUEUES, 0, 0, (u32*)&nq))
 		FATAL("nvme_acmd_get_features number of queues failed");
-	int maxqcount = (nq.nsq < nq.ncq ? nq.nsq : nq.ncq) + 1;
-	if (qcount <= 0) qcount = maxqcount;
-	if (qsize <= 1) qsize = UNVME_QSIZE;
-	if (qsize > dev->nvmedev.maxqsize) qsize = dev->nvmedev.maxqsize;
+	u32 maxqcount = (nq.nsq < nq.ncq ? nq.nsq : nq.ncq) + 1;
+	u32 qcount = (maxqcount > UNVME_QCOUNT ? UNVME_QCOUNT : maxqcount);
+	u32 qsize = (dev->nvmedev.maxqsize > UNVME_QSIZE ? UNVME_QSIZE : dev->nvmedev.maxqsize);
+
 	ns->maxqcount = maxqcount;
 	ns->qcount = qcount;
 	ns->qsize = qsize;
 
 	// setup IO queues
 	DEBUG_FN("Creating %d IO queues (of max %d), queue size %d", qcount, maxqcount, qsize);
-	dev->ioqs = zalloc(qcount * sizeof(unvme_queue_t));
 	for (i = 0; i < qcount; i++) unvme_ioq_create(dev, i);
 
     dev->refcount++;
@@ -604,7 +601,7 @@ int unvme_do_poll(unvme_desc_t* desc, int timeout, u32* cqe_cs)
 unvme_desc_t* unvme_do_rw(unvme_device_t* dev, int qid, int opc,
                           void* buf, u64 slba, u32 nlb)
 {
-    unvme_queue_t* q = dev->ioqs + qid;
+    unvme_queue_t* q = &dev->ioqs[qid];
     unvme_desc_t* desc = unvme_desc_get(q);
     desc->opc = opc;
     desc->buf = buf;
@@ -623,8 +620,8 @@ unvme_desc_t* unvme_do_rw(unvme_device_t* dev, int qid, int opc,
             // poll currently pending descriptor
             int err = unvme_do_poll(desc, UNVME_TIMEOUT, NULL);
             if (err) {
-                if (err == -1) FATAL("q%d timeout", q->nvmeq->id);
-                else ERROR("q%d error %#x", q->nvmeq->id, err);
+                if (err == -1) FATAL("q%d timeout", q->nvmeq.id);
+                else ERROR("q%d error %#x", q->nvmeq.id, err);
             }
         }
 
@@ -651,6 +648,7 @@ unvme_desc_t* unvme_do_cmd(unvme_device_t* dev, int qid, int opc, int nsid,
                            void* buf, u64 bufsz, u32 cdw10_15[6])
 {
     unvme_queue_t* q = (qid == -1) ? &dev->adminq : &dev->ioqs[qid];
+    nvme_queue_t *nvmeq = (q->isadmin) ? q->adminq : &q->nvmeq;
     unvme_desc_t* desc = unvme_desc_get(q);
     desc->opc = opc;
     desc->buf = buf;
@@ -660,7 +658,7 @@ unvme_desc_t* unvme_do_cmd(unvme_device_t* dev, int qid, int opc, int nsid,
     u64 prp1, prp2;
     u16 cid = unvme_get_cid(desc);
     if (unvme_map_prps(dev, q, cid, buf, bufsz, &prp1, &prp2) ||
-        nvme_cmd_vs(q->nvmeq, opc, cid, nsid, prp1, prp2, cdw10_15)) {
+        nvme_cmd_vs(nvmeq, opc, cid, nsid, prp1, prp2, cdw10_15)) {
         unvme_desc_put(desc);
         return NULL;
     }

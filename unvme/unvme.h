@@ -38,7 +38,6 @@
 #define _UNVME_H
 
 #include <stdint.h>
-//#include "unvme_core.h"
 #include "unvme_mem.h"
 #include "unvme_nvme.h"
 
@@ -56,6 +55,7 @@ typedef uint64_t        u64;        ///< 64-bit unsigned
 
 #define UNVME_TIMEOUT   60          ///< default timeout in seconds
 #define UNVME_QSIZE     256         ///< default I/O queue size
+#define UNVME_QCOUNT    31
 
 /// Namespace attributes structure
 typedef struct _unvme_ns {
@@ -121,7 +121,9 @@ typedef struct _unvme_desc {
 
 /// IO queue entry
 typedef struct _unvme_queue {
-    nvme_queue_t*           nvmeq;      ///< NVMe associated queue
+	int                     isadmin;
+	nvme_queue_t*           adminq;
+    nvme_queue_t            nvmeq;      ///< NVMe associated queue
     mem_dma_t*             sqdma;      ///< submission queue mem
     mem_dma_t*             cqdma;      ///< completion queue mem
     mem_dma_t*             prplist;    ///< PRP list
@@ -130,7 +132,7 @@ typedef struct _unvme_queue {
     int                     cidcount;   ///< number of pending cids
     int                     desccount;  ///< number of pending descriptors
     int                     masksize;   ///< bit mask size to allocate
-    u64*                    cidmask;    ///< cid pending bit mask
+    u64                     cidmask[UNVME_QSIZE/8];    ///< cid pending bit mask
     unvme_desc_t*           desclist;   ///< used descriptor list
     unvme_desc_t*           descfree;   ///< free descriptor list
     unvme_desc_t*           descpend;   ///< pending descriptor list
@@ -145,12 +147,12 @@ typedef struct _unvme_device {
     unvme_iomem_t           iomem;      ///< IO memory tracker
     unvme_ns_t              nscnt;      ///< controller namespace (id=0)
     unvme_ns_t              nsio;       ///< io namespace (id=<0)
-    unvme_queue_t*          ioqs;       ///< pointer to IO queues
+    unvme_queue_t           ioqs[UNVME_QCOUNT]; ///< IO queues
 } unvme_device_t;
 
 // Export functions
 int unvme_open(unvme_device_t* dev, int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size);
-int unvme_openq(unvme_device_t* dev, int pci, int nsid, int qcount, int qsize, u64 mem_base_pci, void *mem_base_mb, size_t mem_size);
+int unvme_openq(unvme_device_t* dev, int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size);
 int unvme_close(unvme_device_t* dev);
 
 void* unvme_alloc(unvme_device_t* dev, u64 size);

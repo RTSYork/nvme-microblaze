@@ -73,7 +73,7 @@
 typedef char unvme_page_t[4096];
 
 
-int unvme_do_open(unvme_device_t* dev, int pci, int nsid, int qcount, int qsize, u64 mem_base_pci, void *mem_base_mb, size_t mem_size);
+int unvme_do_open(unvme_device_t* dev, int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size);
 int unvme_do_close(unvme_device_t* dev);
 void* unvme_do_alloc(unvme_device_t* dev, u64 size);
 int unvme_do_free(unvme_device_t* dev, void* buf);

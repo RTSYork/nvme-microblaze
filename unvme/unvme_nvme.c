@@ -544,20 +544,19 @@ int nvme_cmd_write(nvme_queue_t* ioq, u16 cid, int nsid,
 /**
  * Create an IO submission-completion queue pair.
  * @param   dev         device context
- * @param   ioq         if NULL then allocate queue
+ * @param   ioq         queue
  * @param   id          queue id
  * @param   qsize       queue size
  * @param   sqbuf       submission queue buffer
  * @param   sqpa        submission queue IO physical address
  * @param   cqbuf       completion queue buffer
  * @param   cqpa        admin completion IO physical address
- * @return  pointer to the created io queue or NULL if failure.
+ * @return  -1 if failure, 0 otherwise.
  */
-nvme_queue_t* nvme_ioq_create(nvme_device_t* dev, nvme_queue_t* ioq,
+int nvme_ioq_create(nvme_device_t* dev, nvme_queue_t* ioq,
             int id, int qsize, void* sqbuf, u64 sqpa, void* cqbuf, u64 cqpa)
 {
-    if (!ioq) ioq = zalloc(sizeof(*ioq));
-    else ioq->ext = 1;
+    memset(ioq, 0, sizeof(*ioq));
 
     ioq->dev = dev;
     ioq->id = id;
@@ -568,10 +567,9 @@ nvme_queue_t* nvme_ioq_create(nvme_device_t* dev, nvme_queue_t* ioq,
     ioq->cq_doorbell = ioq->sq_doorbell + dev->dbstride;
 
     if (nvme_acmd_create_cq(ioq, cqpa) || nvme_acmd_create_sq(ioq, sqpa)) {
-        free(ioq);
-        return NULL;
+        return -1;
     }
-    return ioq;
+    return 0;
 }
 
 /**
@@ -583,7 +581,6 @@ int nvme_ioq_delete(nvme_queue_t* ioq)
 {
     if (!ioq) return -1;
     if (nvme_acmd_delete_sq(ioq) || nvme_acmd_delete_cq(ioq)) return -1;
-    if (!ioq->ext) free(ioq);
     return 0;
 }
 
