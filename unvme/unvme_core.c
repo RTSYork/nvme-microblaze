@@ -444,38 +444,37 @@ int unvme_do_open(unvme_device_t* dev, int pci, int nsid, u64 mem_base_pci, void
 	mem_dma_t* dma = mem_dma_alloc(&dev->memdev, 4096, 1);
 	if (nvme_acmd_identify(&dev->nvmedev, 0, dma->addr, 0))
 		FATAL("nvme_acmd_identify controller failed");
-	nvme_identify_ctlr_t* idc = malloc(sizeof(nvme_identify_ctlr_t));
-	memcpy(idc, dma->buf, sizeof(nvme_identify_ctlr_t));
+	static nvme_identify_ctlr_t idc;
+	memcpy(&idc, dma->buf, sizeof(nvme_identify_ctlr_t));
 
-	if (nsid > idc->nn) {
-		ERROR("invalid %06x nsid %d (max %d)", pci, nsid, idc->nn);
+	if (nsid > idc.nn) {
+		ERROR("invalid %06x nsid %d (max %d)", pci, nsid, idc.nn);
 		return 1;
 	}
 
 	unvme_ns_t* ns = &dev->nscnt;
 	ns->pci = pci;
 	ns->id = 0;
-	ns->nscount = idc->nn;
+	ns->nscount = idc.nn;
 	sprintf(ns->device, "%02x:%02x.%x", pci >> 16, (pci >> 8) & 0xff, pci & 0xff);
 	ns->maxqsize = dev->nvmedev.maxqsize;
 	ns->pageshift = dev->nvmedev.pageshift;
 	ns->pagesize = 1 << ns->pageshift;
 	int i;
-	ns->vid = idc->vid;
-	memcpy(ns->mn, idc->mn, sizeof (ns->mn));
+	ns->vid = idc.vid;
+	memcpy(ns->mn, idc.mn, sizeof (ns->mn));
 	for (i = sizeof (ns->mn) - 1; i > 0 && ns->mn[i] == ' '; i--) ns->mn[i] = 0;
-	memcpy(ns->sn, idc->sn, sizeof (ns->sn));
+	memcpy(ns->sn, idc.sn, sizeof (ns->sn));
 	for (i = sizeof (ns->sn) - 1; i > 0 && ns->sn[i] == ' '; i--) ns->sn[i] = 0;
-	memcpy(ns->fr, idc->fr, sizeof (ns->fr));
+	memcpy(ns->fr, idc.fr, sizeof (ns->fr));
 	for (i = sizeof (ns->fr) - 1; i > 0 && ns->fr[i] == ' '; i--) ns->fr[i] = 0;
 
 	// set limit to 1 PRP list page per IO submission
 	ns->maxppio = ns->pagesize / sizeof(u64);
-	if (idc->mdts) {
-		int mp = 2 << (idc->mdts - 1);
+	if (idc.mdts) {
+		int mp = 2 << (idc.mdts - 1);
 		if (ns->maxppio > mp) ns->maxppio = mp;
 	}
-	free(idc);
 	mem_dma_free(dma);
 
 	// get max number of queues supported
