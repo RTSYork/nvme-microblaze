@@ -160,28 +160,27 @@ int nvme_identify(int pci, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
 
     if (nvme_acmd_identify(nvmedev, 0, dma->addr, dma->addr + 4096))
         errx(1, "nvme_acmd_identify 0");
-    nvme_identify_ctlr_t* ctlr = malloc(sizeof(nvme_identify_ctlr_t));
-    memcpy(ctlr, dma->buf, sizeof(nvme_identify_ctlr_t));
-    print_controller(ctlr);
+    static nvme_identify_ctlr_t ctlr;
+    memcpy(&ctlr, dma->buf, sizeof(nvme_identify_ctlr_t));
+    print_controller(&ctlr);
 
     u64 nsaddr = dma->addr + 8192;
     void* nsbuf = dma->buf + 8192;
 
     if (nsid) {
-        if (nsid > ctlr->nn)
+        if (nsid > ctlr.nn)
             errx(1, "invalid nsid %d", nsid);
         if (nvme_acmd_identify(nvmedev, nsid, nsaddr, nsaddr + 4096))
             errx(1, "nvme_acmd_identify %d", nsid);
         print_namespace(nsbuf + 8192, nsid);
     } else {
-        for (nsid = 1; nsid <= ctlr->nn; nsid++) {
+        for (nsid = 1; nsid <= ctlr.nn; nsid++) {
             if (nvme_acmd_identify(nvmedev, nsid, nsaddr, nsaddr + 4096))
                 errx(1, "nvme_acmd_identify %d", nsid);
             print_namespace(nsbuf + 8192, nsid);
         }
     }
 
-    free(ctlr);
     mem_dma_free(dma);
     nvme_cleanup();
 
