@@ -186,13 +186,13 @@ int mem_dma_free(mem_dma_t* dma)
  * @param   pci         PCI device id (as %x:%x.%x format)
  * @return  device context or NULL if failure.
  */
-mem_device_t* mem_create(mem_device_t* dev, int pci, u64 base_pci, void *base_mb, size_t size)
+int mem_create(mem_device_t *dev, int pci, u64 base_pci, void *base_mb, size_t size)
 {
     DEBUG_FN("%x started", pci);
 
     // allocate and initialize device context
-    if (!dev) dev = zalloc(sizeof(*dev));
-    else dev->ext = 1;
+    if (!dev)
+        return 1;
     dev->pci = pci;
     dev->pagesize = 4096;
     dev->iovabase = base_pci;
@@ -231,7 +231,7 @@ mem_device_t* mem_create(mem_device_t* dev, int pci, u64 base_pci, void *base_mb
     DEBUG_FN("%x base_pci=%#x base_mb=%#x size=%#x",
 			 pci, base_pci, base_mb, size);
 
-    return (mem_device_t*)dev;
+    return 0;
 }
 
 /**
@@ -245,6 +245,4 @@ void mem_delete(mem_device_t* dev)
 
     // free all memory associated with the device
     while (dev->memlist) mem_free(dev->memlist);
-
-    if (!dev->ext) free(dev);
 }

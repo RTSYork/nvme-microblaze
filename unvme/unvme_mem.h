@@ -72,7 +72,6 @@ typedef struct _mem {
 typedef struct _mem_device {
     int                     pci;        ///< PCI device number
     int                     pagesize;   ///< system page size
-    int                     ext;        ///< externally allocated flag
     __u64                   iovabase;   ///< IO virtual address base
     __u64                   iovanext;   ///< next IO virtual address to use
     __u64                   iovamask;   ///< max IO virtual address mask
@@ -83,7 +82,7 @@ typedef struct _mem_device {
 } mem_device_t;
 
 // Export functions
-mem_device_t* mem_create(mem_device_t* dev, int pci, u64 base_pci, void *base_mb, size_t size);
+int mem_create(mem_device_t* dev, int pci, u64 base_pci, void *base_mb, size_t size);
 void mem_delete(mem_device_t* dev);
 int mem_free(mem_t* mem);
 mem_dma_t* mem_dma_map(mem_device_t* dev, size_t size, void* pmb);

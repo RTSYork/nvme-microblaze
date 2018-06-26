@@ -64,7 +64,7 @@ int main()
 	if (nvme_identify(0x010000, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error;
 	if (nvme_get_features(0x010000, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error;
 	if (nvme_get_log_page(0x010000, 1, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error; // error information
-	if (nvme_get_log_page(0x010000, 2, -1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error; // SMART / Health information (device doesn't respond)
+	if (nvme_get_log_page(0x010000, 2, -1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error; // SMART / Health information
 	if (nvme_get_log_page(0x010000, 3, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error; // firmware slot information
 	printf("\r\nDone\n\r");
 

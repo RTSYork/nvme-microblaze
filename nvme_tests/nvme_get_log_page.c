@@ -40,8 +40,8 @@
 #include "../unvme/unvme_nvme.h"
 #include "../unvme/unvme_log.h"
 
-static mem_device_t* memdev;
-static nvme_device_t* nvmedev;
+static mem_device_t memdev;
+static nvme_device_t nvmedev;
 static mem_dma_t* adminsq;
 static mem_dma_t* admincq;
 
@@ -50,18 +50,18 @@ static mem_dma_t* admincq;
  */
 static void nvme_setup(int pci, int aqsize, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
 {
-    memdev = mem_create(NULL, pci, mem_base_pci, mem_base_mb, mem_size);
-    if (!memdev) errx(1, "vfio_create");
+    int ret = mem_create(&memdev, pci, mem_base_pci, mem_base_mb, mem_size);
+    if (ret) errx(1, "vfio_create");
 
-    nvmedev = nvme_create(NULL);
-    if (!nvmedev) errx(1, "nvme_create");
+    ret = nvme_create(&nvmedev);
+    if (ret) errx(1, "nvme_create");
 
-    adminsq = mem_dma_alloc(memdev, aqsize * sizeof(nvme_sq_entry_t), 1);
+    adminsq = mem_dma_alloc(&memdev, aqsize * sizeof(nvme_sq_entry_t), 1);
     if (!adminsq) errx(1, "vfio_dma_alloc");
-    admincq = mem_dma_alloc(memdev, aqsize * sizeof(nvme_cq_entry_t), 1);
+    admincq = mem_dma_alloc(&memdev, aqsize * sizeof(nvme_cq_entry_t), 1);
     if (!admincq) errx(1, "vfio_dma_alloc");
 
-    if (!nvme_adminq_setup(nvmedev, aqsize, adminsq->buf, adminsq->addr,
+    if (!nvme_adminq_setup(&nvmedev, aqsize, adminsq->buf, adminsq->addr,
                                             admincq->buf, admincq->addr)) {
         errx(1, "nvme_setup_adminq");
     }
@@ -74,8 +74,7 @@ static void nvme_cleanup()
 {
     mem_dma_free(adminsq);
     mem_dma_free(admincq);
-    nvme_delete(nvmedev);
-    mem_delete(memdev);
+    mem_delete(&memdev);
 }
 
 /**
@@ -167,13 +166,13 @@ int nvme_get_log_page(int pci, int lid, int nsid, u64 mem_base_pci, void *mem_ba
     }
 
     nvme_setup(pci, 8, mem_base_pci, mem_base_mb, mem_size);
-    mem_dma_t* dma = mem_dma_alloc(memdev, 8192, 0);
+    mem_dma_t* dma = mem_dma_alloc(&memdev, 8192, 0);
     if (!dma) errx(1, "vfio_dma_alloc");
 
     int numd = dma->size / sizeof(u32) - 1;
     u64 prp1 = dma->addr;
     u64 prp2 = dma->addr + 4096;
-    int err = nvme_acmd_get_log_page(nvmedev, nsid, lid, numd, prp1, prp2);
+    int err = nvme_acmd_get_log_page(&nvmedev, nsid, lid, numd, prp1, prp2);
     if (err) errx(1, "nvme_acmd_get_log_page");
 
     switch (lid) {

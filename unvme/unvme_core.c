@@ -418,7 +418,6 @@ static void unvme_cleanup(unvme_device_t* dev)
         int q;
         for (q = 0; q < dev->nscnt.qcount; q++) unvme_ioq_delete(dev, q);
         unvme_adminq_delete(dev);
-        nvme_delete(&dev->nvmedev);
         mem_delete(&dev->memdev);
     }
 }

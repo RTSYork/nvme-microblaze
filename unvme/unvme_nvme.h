@@ -579,13 +579,11 @@ typedef struct _nvme_device {
     u16                     pageshift;  ///< minimum pagesize shift
     u16                     mpsmin;     ///< MPSMIN
     u16                     mpsmax;     ///< MPSMAX
-    u16                     ext;        ///< externally allocated flag
 } nvme_device_t;
 
 
 // Export functions
-nvme_device_t* nvme_create(nvme_device_t* dev);
-void nvme_delete(nvme_device_t* dev);
+int nvme_create(nvme_device_t* dev);
 
 nvme_queue_t* nvme_adminq_setup(nvme_device_t* dev, int qsize, void* sqbuf, u64 sqpa, void* cqbuf, u64 cqpa);
 int nvme_ioq_create(nvme_device_t* dev, nvme_queue_t* ioq, int id, int qsize, void* sqbuf, u64 sqpa, void* cqbuf, u64 cqpa);

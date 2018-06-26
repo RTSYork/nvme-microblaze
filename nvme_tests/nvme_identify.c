@@ -41,8 +41,8 @@
 #include "../unvme/unvme_nvme.h"
 #include "../unvme/unvme_log.h"
 
-static mem_device_t* memdev;
-static nvme_device_t* nvmedev;
+static mem_device_t memdev;
+static nvme_device_t nvmedev;
 static mem_dma_t* adminsq;
 static mem_dma_t* admincq;
 
@@ -51,18 +51,18 @@ static mem_dma_t* admincq;
  */
 static void nvme_setup(int pci, int aqsize, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
 {
-    memdev = mem_create(NULL, pci, mem_base_pci, mem_base_mb, mem_size);
-    if (!memdev) errx(1, "vfio_create");
+    int ret = mem_create(&memdev, pci, mem_base_pci, mem_base_mb, mem_size);
+    if (ret) errx(1, "vfio_create");
 
-    nvmedev = nvme_create(NULL);
-    if (!nvmedev) errx(1, "nvme_create");
+    ret = nvme_create(&nvmedev);
+    if (ret) errx(1, "nvme_create");
 
-    adminsq = mem_dma_alloc(memdev, aqsize * sizeof(nvme_sq_entry_t), 1);
+    adminsq = mem_dma_alloc(&memdev, aqsize * sizeof(nvme_sq_entry_t), 1);
     if (!adminsq) errx(1, "vfio_dma_alloc");
-    admincq = mem_dma_alloc(memdev, aqsize * sizeof(nvme_cq_entry_t), 1);
+    admincq = mem_dma_alloc(&memdev, aqsize * sizeof(nvme_cq_entry_t), 1);
     if (!admincq) errx(1, "vfio_dma_alloc");
 
-    if (!nvme_adminq_setup(nvmedev, aqsize, adminsq->buf, adminsq->addr,
+    if (!nvme_adminq_setup(&nvmedev, aqsize, adminsq->buf, adminsq->addr,
                                             admincq->buf, admincq->addr)) {
         errx(1, "nvme_setup_adminq");
     }
@@ -75,8 +75,7 @@ static void nvme_cleanup()
 {
     mem_dma_free(adminsq);
     mem_dma_free(admincq);
-    nvme_delete(nvmedev);
-    mem_delete(memdev);
+    mem_delete(&memdev);
 }
 
 
@@ -155,10 +154,10 @@ int nvme_identify(int pci, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
     int nsid = 0;
 
     nvme_setup(pci, 8, mem_base_pci, mem_base_mb, mem_size);
-    mem_dma_t* dma = mem_dma_alloc(memdev, 16384, 0);
+    mem_dma_t* dma = mem_dma_alloc(&memdev, 16384, 0);
     if (!dma) errx(1, "vfio_dma_alloc");
 
-    if (nvme_acmd_identify(nvmedev, 0, dma->addr, dma->addr + 4096))
+    if (nvme_acmd_identify(&nvmedev, 0, dma->addr, dma->addr + 4096))
         errx(1, "nvme_acmd_identify 0");
     static nvme_identify_ctlr_t ctlr;
     memcpy(&ctlr, dma->buf, sizeof(nvme_identify_ctlr_t));
@@ -170,12 +169,12 @@ int nvme_identify(int pci, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
     if (nsid) {
         if (nsid > ctlr.nn)
             errx(1, "invalid nsid %d", nsid);
-        if (nvme_acmd_identify(nvmedev, nsid, nsaddr, nsaddr + 4096))
+        if (nvme_acmd_identify(&nvmedev, nsid, nsaddr, nsaddr + 4096))
             errx(1, "nvme_acmd_identify %d", nsid);
         print_namespace(nsbuf + 8192, nsid);
     } else {
         for (nsid = 1; nsid <= ctlr.nn; nsid++) {
-            if (nvme_acmd_identify(nvmedev, nsid, nsaddr, nsaddr + 4096))
+            if (nvme_acmd_identify(&nvmedev, nsid, nsaddr, nsaddr + 4096))
                 errx(1, "nvme_acmd_identify %d", nsid);
             print_namespace(nsbuf + 8192, nsid);
         }

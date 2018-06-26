@@ -638,12 +638,13 @@ nvme_queue_t* nvme_adminq_setup(nvme_device_t* dev, int qsize,
  * @param   mapfd       file descriptor for register mapping
  * @return  device context or NULL if failure.
  */
-nvme_device_t* nvme_create(nvme_device_t* dev)
+int nvme_create(nvme_device_t* dev)
 {
 	DEBUG_FN("started");
 
-    if (!dev) dev = zalloc(sizeof(*dev));
-    else dev->ext = 1;
+    if (!dev)
+        return 1;
+
     dev->rdtsec = rdtsc_second();
 
     dev->reg = (void *)0xe0010000;
@@ -664,15 +665,5 @@ nvme_device_t* nvme_create(nvme_device_t* dev)
              cap.val, cap.mpsmin, cap.mpsmax, cap.to, dev->maxqsize,
              dev->dbstride, dev->cmbloc.val, dev->cmbsz.val);
 
-    return dev;
+    return 0;
 }
-
-/**
- * Delete an NVMe device context
- * @param   dev         device context
- */
-void nvme_delete(nvme_device_t* dev)
-{
-    if (!dev->ext) free(dev);
-}
-
