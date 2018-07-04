@@ -47,6 +47,8 @@
 /// Print fatal error and exit
 #define FATAL(fmt, arg...)  do { ERROR(fmt, ##arg); abort(); } while (0)
 
+int mems = 0;
+int mems_max = 0;
 
 /**
  * Allocate memory memory.  The size will be rounded to page aligned size.
@@ -56,28 +58,37 @@
  * @param   pmb         premapped buffer
  * @return  memory structure pointer or NULL if error.
  */
-static mem_t* mem_alloc(mem_device_t* dev, size_t size, void* pmb, int clear)
+mem_t* mem_alloc(mem_device_t* dev, mem_t* mem_in, size_t size, int clear)
 {
-    mem_t* mem = zalloc(sizeof(*mem));
+	mem_t *mem;
+
+	if (!mem_in) {
+		mem = zalloc(sizeof(*mem));
+	}
+	else {
+		mem = mem_in;
+		memset(mem, 0, sizeof(*mem));
+		mem->static_mem = 1;
+	}
+
+    if (mems_max < ++mems) mems_max = mems;
+    INFO_FN("mems: %d / %d", mems, mems_max);
     mem->size = size;
     size_t mask = dev->pagesize - 1;
     size = (size + mask) & ~mask;
 
-    if (pmb) {
-        mem->dma.buf = pmb;
-    } else {
-        if (dev->memoff + size > dev->memsize) {
-            ERROR("Out of memory space (next allocation would use %#lx of %#lx)", dev->memoff + size, dev->memsize);
-            free(mem);
-            return NULL;
-        }
-        mem->dma.buf = dev->membuf + dev->memoff;
-        dev->memoff += size;
-    }
+	if (dev->memoff + size > dev->memsize) {
+		ERROR("Out of memory space (next allocation would use %#lx of %#lx)", dev->memoff + size, dev->memsize);
+		if (!mem->static_mem)
+			free(mem);
+		INFO_FN("mems: %d / %d", --mems, mems_max);
+		return NULL;
+	}
+	mem->dma_buf = dev->membuf + dev->memoff;
+	dev->memoff += size;
 
-    mem->dma.size = size;
-    mem->dma.addr = dev->iovanext;
-    mem->dma.mem = mem;
+	mem->dma_size = size;
+    mem->dma_addr = dev->iovanext;
     mem->dev = dev;
 
     // add node to the memory list
@@ -92,12 +103,14 @@ static mem_t* mem_alloc(mem_device_t* dev, size_t size, void* pmb, int clear)
         dev->memlist->prev = mem;
     }
     dev->iovanext += size;
-    DEBUG_FN("%x %#lx %#lx %#lx %#lx", dev->pci, mem->dma.addr, size, dev->iovanext, dev->memoff);
+    DEBUG_FN("%x %#lx %#lx %#lx %#lx", PCI_DEV, mem->dma_addr, size, dev->iovanext, dev->memoff);
 
     if (clear) {
-    	DEBUG_FN("clearing %#x bytes of memory at %#lx", size, (u32)mem->dma.addr);
-		memset((void *)(u32)mem->dma.addr, 0, size);
+    	DEBUG_FN("clearing %#x bytes of memory at %#lx", size, (u32)mem->dma_addr);
+		memset((void *)(u32)mem->dma_addr, 0, size);
     }
+
+    mem->valid = 1;
 
     return mem;
 }
@@ -109,12 +122,15 @@ static mem_t* mem_alloc(mem_device_t* dev, size_t size, void* pmb, int clear)
  */
 int mem_free(mem_t* mem)
 {
+	if (!mem || !mem->valid)
+		return -1;
+
     mem_device_t* dev = mem->dev;
 
     // remove node from memory list
     if (mem->next == dev->memlist) { // If removing last item in list
-        dev->iovanext -= mem->dma.size;
-        dev->memoff -= mem->dma.size;
+        dev->iovanext -= mem->dma_size;
+        dev->memoff -= mem->dma_size;
     }
     if (mem->next == mem) { // If removing only item in list
         dev->memlist = NULL;
@@ -126,58 +142,18 @@ int mem_free(mem_t* mem)
         if (dev->memlist == mem) { // If first item in list
             dev->memlist = mem->next;
         }
-        dev->iovanext = dev->memlist->prev->dma.addr + dev->memlist->prev->dma.size; // IOVA next is after last item in list
+        dev->iovanext = dev->memlist->prev->dma_addr + dev->memlist->prev->dma_size; // IOVA next is after last item in list
         dev->memoff = dev->iovanext - dev->iovabase; // Buffer offset is same as IOVA offset
     }
-    DEBUG_FN("%x %#lx %#lx %#lx %#lx", dev->pci, mem->dma.addr, mem->dma.size, dev->iovanext, dev->memoff);
+    DEBUG_FN("%x %#lx %#lx %#lx %#lx", PCI_DEV, mem->dma_addr, mem->dma_size, dev->iovanext, dev->memoff);
 
-    free(mem);
+    if (!mem->static_mem)
+        free(mem);
+    else
+    	mem->valid = 0;
+
+    INFO_FN("mems: %d / %d", --mems, mems_max);
     return 0;
-}
-
-/**
- * Map a premapped buffer and return a DMA buffer.
- * @param   dev         device context
- * @param   size        allocation size
- * @param   pmb         premapped buffer
- * @return  0 if ok else -1.
- */
-mem_dma_t* mem_dma_map(mem_device_t* dev, size_t size, void* pmb)
-{
-    mem_t* mem = mem_alloc(dev, size, pmb, 0);
-    return mem ? &mem->dma : NULL;
-}
-
-/**
- * Free a DMA buffer (without unmapping dma->buf).
- * @param   dma         memory pointer
- * @return  0 if ok else -1.
- */
-int mem_dma_unmap(mem_dma_t* dma)
-{
-    return mem_free(dma->mem);
-}
-
-/**
- * Allocate and return a DMA buffer.
- * @param   dev         device context
- * @param   size        allocation size
- * @return  0 if ok else -1.
- */
-mem_dma_t* mem_dma_alloc(mem_device_t* dev, size_t size, int clear)
-{
-    mem_t* mem = mem_alloc(dev, size, 0, clear);
-    return mem ? &mem->dma : NULL;
-}
-
-/**
- * Free a DMA buffer.
- * @param   dma         memory pointer
- * @return  0 if ok else -1.
- */
-int mem_dma_free(mem_dma_t* dma)
-{
-    return mem_free(dma->mem);
 }
 
 /**
@@ -186,22 +162,21 @@ int mem_dma_free(mem_dma_t* dma)
  * @param   pci         PCI device id (as %x:%x.%x format)
  * @return  device context or NULL if failure.
  */
-int mem_create(mem_device_t *dev, int pci, u64 base_pci, void *base_mb, size_t size)
+int mem_create(mem_device_t *dev)
 {
-    DEBUG_FN("%x started", pci);
+    DEBUG_FN("%x started", PCI_DEV);
 
     // allocate and initialize device context
     if (!dev)
         return 1;
-    dev->pci = pci;
     dev->pagesize = 4096;
-    dev->iovabase = base_pci;
+    dev->iovabase = MEM_BASE_PCI;
     dev->iovanext = dev->iovabase;
 
 	pcie_ecam_enable();
 
 	__u8 config[256];
-	pcie_ecam_read_pci(dev->pci, 0, config, sizeof(config));
+	pcie_ecam_read_pci(PCI_DEV, 0, config, sizeof(config));
 	HEX_DUMP(config, sizeof(config));
 
 	__u16* vendor = (__u16*)(config + PCI_VENDOR_ID);
@@ -211,25 +186,25 @@ int mem_create(mem_device_t *dev, int pci, u64 base_pci, void *base_mb, size_t s
 		FATAL("device in bad state");
 
 	*cmd |= PCI_COMMAND_MASTER|PCI_COMMAND_MEMORY|PCI_COMMAND_INTX_DISABLE;
-	pcie_ecam_write_pci(dev->pci, PCI_COMMAND, cmd, sizeof(*cmd));
-	pcie_ecam_read_pci(dev->pci, PCI_COMMAND, cmd, sizeof(*cmd));
+	pcie_ecam_write_pci(PCI_DEV, PCI_COMMAND, cmd, sizeof(*cmd));
+	pcie_ecam_read_pci(PCI_DEV, PCI_COMMAND, cmd, sizeof(*cmd));
 
 #ifdef UNVME_DEBUG
-	pcie_print_ecam_pci(dev->pci, 0x20);
+	pcie_print_ecam_pci(PCI_DEV, 0x20);
 #endif
 
 	pcie_ecam_disable();
 
 	DEBUG_FN("%x vendor=%#x cmd=%#x device=%04x rev=%d",
-			 pci, *vendor, *cmd,
+			PCI_DEV, *vendor, *cmd,
 			 *(__u16*)(config + PCI_DEVICE_ID), config[PCI_REVISION_ID]);
 
-    dev->membuf = base_mb;
+    dev->membuf = (void *)MEM_BASE_MB;
     dev->memoff = 0;
-    dev->memsize = size;
+    dev->memsize = MEM_SIZE;
 
     DEBUG_FN("%x base_pci=%#x base_mb=%#x size=%#x",
-			 pci, base_pci, base_mb, size);
+    		PCI_DEV, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE);
 
     return 0;
 }
@@ -241,7 +216,7 @@ int mem_create(mem_device_t *dev, int pci, u64 base_pci, void *base_mb, size_t s
 void mem_delete(mem_device_t* dev)
 {
     if (!dev) return;
-    DEBUG_FN("%x", dev->pci);
+    DEBUG_FN("%x", PCI_DEV);
 
     // free all memory associated with the device
     while (dev->memlist) mem_free(dev->memlist);

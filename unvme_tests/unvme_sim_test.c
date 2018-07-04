@@ -47,7 +47,7 @@
 #include "../timer.h"
 
 
-int unvme_sim_test(u64 lba, u64 size, int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
+int unvme_sim_test(u64 lba, u64 size)
 {
 	printf("\r\nunvme_sim_test test starting...\r\n\n");
 
@@ -56,11 +56,11 @@ int unvme_sim_test(u64 lba, u64 size, int pci, int nsid, u64 mem_base_pci, void 
 
     printf("SIMPLE WRITE-READ-VERIFY TEST BEGIN\n\r");
     unvme_device_t dev;
-    int ret = unvme_open(&dev, pci, nsid, mem_base_pci, mem_base_mb, mem_size);
+    int ret = unvme_open(&dev);
     if (ret) exit(1);
     unvme_ns_t *ns = &dev.nsio;
     printf("%s qc=%ld/%ld qs=%ld/%ld bc=%#llx bs=%d mbio=%d ds=%#llx\n\r",
-            ns->device, ns->qcount, ns->maxqcount, ns->qsize, ns->maxqsize,
+            PCI_DEV_NAME, ns->qcount, ns->maxqcount, ns->qsize, ns->maxqsize,
             ns->blockcount, ns->blocksize, ns->maxbpio, datasize);
 
     void* buf = unvme_alloc(&dev, datasize);

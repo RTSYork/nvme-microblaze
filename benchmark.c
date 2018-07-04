@@ -3,7 +3,7 @@
 #include "unvme/unvme.h"
 #include "timer.h"
 
-int read_benchmark(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size) {
+int read_benchmark() {
 	printf("\r\nRead benchmark running\r\n");
 
 	void *buf;
@@ -13,8 +13,8 @@ int read_benchmark(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_
 	u64 blocks_per_io;
 	u64 size, size_per_io;
 
-    unvme_device_t dev;
-	if (unvme_openq(&dev, pci, nsid, mem_base_pci, mem_base_mb, mem_size)) {
+    static unvme_device_t dev;
+	if (unvme_openq(&dev)) {
 		printf("\r\nError opening device\r\n");
 		return 1;
 	};
@@ -54,7 +54,7 @@ int read_benchmark(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_
 	return 0;
 }
 
-int write_benchmark(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size) {
+int write_benchmark() {
 	printf("\r\nWrite benchmark running\r\n");
 
 	void *buf;
@@ -64,8 +64,8 @@ int write_benchmark(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size
 	u64 blocks_per_io;
 	u64 size, size_per_io;
 
-    unvme_device_t dev;
-	if (unvme_openq(&dev, pci, nsid, mem_base_pci, mem_base_mb, mem_size)) {
+    static unvme_device_t dev;
+	if (unvme_openq(&dev)) {
 		printf("\r\nError opening device\r\n");
 		return 1;
 	};

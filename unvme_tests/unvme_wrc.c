@@ -17,6 +17,7 @@
 #include "../unvme/unvme.h"
 
 #include "../timer.h"
+#include "../params.h"
 
 #define errx(code, fmt, arg...) do { printf("error: " fmt "\n\r", ##arg); exit(code); } while (0)
 
@@ -30,8 +31,8 @@ static u64 startlba = 0;        ///< starting LBA
 static u64 lbacount = 0;        ///< LBA count
 static u64 pattern = 0;         ///< 64-bit data pattern
 static u64 patinc = 0;          ///< pattern increment per LBA
-static u32 qcount = 16;         ///< IO queue count
-static u32 qdepth = 64;         ///< IO queue depth
+static u32 qcount = UNVME_QCOUNT; ///< IO queue count
+static u32 qdepth = UNVME_QSIZE-1;  ///< IO queue depth
 static u32 nbpio = 0;           ///< number of blocks per IO
 static u64 dumptime = 0;     ///< interval to display data
 static int dump = 0;            ///< dump count
@@ -106,7 +107,7 @@ unvme_iod_t submit(int q, int d, void* buf, u64 lba, u32 nlb)
 /*
  * Main.
  */
-int unvme_wrc(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size, u32 rw_in, u64 pattern_in, u64 patinc_in, u64 startlba_in, u64 lbacount_in, u32 qcount_in, u32 qdepth_in, u32 nbpio_in, u64 dumptime_in)
+int unvme_wrc(u32 rw_in, u64 pattern_in, u64 patinc_in, u64 startlba_in, u64 lbacount_in, u32 qcount_in, u32 qdepth_in, u32 nbpio_in, u64 dumptime_in)
 {
 /*
     const char* usage = "Usage: %s [OPTION]... PCINAME\n\
@@ -140,7 +141,7 @@ int unvme_wrc(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem
 
     // open device and allocate buffer
     u64 tstart = timer_get_value();
-    int ret = unvme_open(&dev, pci, nsid, mem_base_pci, mem_base_mb, mem_size);
+    int ret = unvme_open(&dev);
     if (ret) exit(1);
     ns = &dev.nsio;
     if ((startlba + lbacount) > ns->blockcount) {
@@ -159,7 +160,7 @@ int unvme_wrc(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem
     }
 
     printf("%s qc=%ld/%ld qd=%ld/%ld bc=%#llx bs=%d nbpio=%ld/%d\n",
-            ns->device, qcount, ns->qcount, qdepth, ns->qsize-1,
+            PCI_DEV_NAME, qcount, ns->qcount, qdepth, ns->qsize-1,
             ns->blockcount, ns->blocksize, nbpio, ns->maxbpio);
 
     int iomax = qcount * qdepth;

@@ -103,6 +103,7 @@ static inline void hex_dump(void* buf, int len)
  */
 static inline void* zalloc(int size)
 {
+	INFO_FN("Allocating %d", size);
     void* mem = calloc(1, size);
     if (!mem) {
         ERROR("calloc");

@@ -42,27 +42,27 @@
 
 static mem_device_t memdev;
 static nvme_device_t nvmedev;
-static mem_dma_t* adminsq;
-static mem_dma_t* admincq;
+static mem_t* adminsq;
+static mem_t* admincq;
 
 /**
  * NVMe setup.
  */
-static void nvme_setup(int pci, int aqsize, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
+static void nvme_setup(int aqsize)
 {
-    int ret = mem_create(&memdev, pci, mem_base_pci, mem_base_mb, mem_size);
+    int ret = mem_create(&memdev);
     if (ret) errx(1, "vfio_create");
 
     ret = nvme_create(&nvmedev);
     if (ret) errx(1, "nvme_create");
 
-    adminsq = mem_dma_alloc(&memdev, aqsize * sizeof(nvme_sq_entry_t), 1);
+    adminsq = mem_alloc(&memdev, NULL, aqsize * sizeof(nvme_sq_entry_t), 1);
     if (!adminsq) errx(1, "vfio_dma_alloc");
-    admincq = mem_dma_alloc(&memdev, aqsize * sizeof(nvme_cq_entry_t), 1);
+    admincq = mem_alloc(&memdev, NULL, aqsize * sizeof(nvme_cq_entry_t), 1);
     if (!admincq) errx(1, "vfio_dma_alloc");
 
-    if (!nvme_adminq_setup(&nvmedev, aqsize, adminsq->buf, adminsq->addr,
-                                            admincq->buf, admincq->addr)) {
+    if (!nvme_adminq_setup(&nvmedev, aqsize, adminsq->dma_buf, adminsq->dma_addr,
+                                            admincq->dma_buf, admincq->dma_addr)) {
         errx(1, "nvme_setup_adminq");
     }
 }
@@ -72,8 +72,8 @@ static void nvme_setup(int pci, int aqsize, u64 mem_base_pci, void *mem_base_mb,
  */
 static void nvme_cleanup()
 {
-    mem_dma_free(adminsq);
-    mem_dma_free(admincq);
+    mem_free(adminsq);
+    mem_free(admincq);
     mem_delete(&memdev);
 }
 
@@ -152,12 +152,12 @@ void print_firmware_slot(void* buf)
 /**
  * Main program.
  */
-int nvme_get_log_page(int pci, int lid, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
+int nvme_get_log_page(int lid, int nsid)
 {
 	printf("\r\n%s test starting...\r\n\n", __func__);
 
 	// LOG_PAGE_ID 1 = error information
-	// LOG_PAGE_ID 2 = SMART / Health information
+	// LOG_PAGE_ID 2 = SMART / Health information (NSID -1 only)
 	// LOG_PAGE_ID 3 = firmware slot information
 
     if (lid < 1 || lid > 3) {
@@ -165,20 +165,20 @@ int nvme_get_log_page(int pci, int lid, int nsid, u64 mem_base_pci, void *mem_ba
         return 1;
     }
 
-    nvme_setup(pci, 8, mem_base_pci, mem_base_mb, mem_size);
-    mem_dma_t* dma = mem_dma_alloc(&memdev, 8192, 0);
-    if (!dma) errx(1, "vfio_dma_alloc");
+    nvme_setup(8);
+    mem_t* mem = mem_alloc(&memdev, NULL, 8192, 0);
+    if (!mem) errx(1, "mem_alloc");
 
-    int numd = dma->size / sizeof(u32) - 1;
-    u64 prp1 = dma->addr;
-    u64 prp2 = dma->addr + 4096;
+    int numd = mem->dma_size / sizeof(u32) - 1;
+    u64 prp1 = mem->dma_addr;
+    u64 prp2 = mem->dma_addr + 4096;
     int err = nvme_acmd_get_log_page(&nvmedev, nsid, lid, numd, prp1, prp2);
     if (err) errx(1, "nvme_acmd_get_log_page");
 
     switch (lid) {
-        case 1: print_error_info(dma->buf); break;
-        case 2: print_smart_health(dma->buf); break;
-        case 3: print_firmware_slot(dma->buf); break;
+        case 1: print_error_info(mem->dma_buf); break;
+        case 2: print_smart_health(mem->dma_buf); break;
+        case 3: print_firmware_slot(mem->dma_buf); break;
     }
 
     nvme_cleanup();

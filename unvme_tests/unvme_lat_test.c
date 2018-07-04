@@ -202,7 +202,7 @@ void run_test(const char* name, int rw)
 /**
  * Main program.
  */
-int unvme_lat_test(int runtime_in, int qcount_in, int qsize_in, int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
+int unvme_lat_test(int runtime_in, int qcount_in, int qsize_in)
 {
 	printf("\r\nunvme_lat_test test starting...\r\n\n");
 
@@ -213,7 +213,7 @@ int unvme_lat_test(int runtime_in, int qcount_in, int qsize_in, int pci, int nsi
 
     printf("LATENCY TEST BEGIN\n");
     time_t tstart = timer_get_value();
-    if (unvme_open(&dev, pci, nsid, mem_base_pci, mem_base_mb, mem_size)) exit(1);
+    if (unvme_open(&dev)) exit(1);
     ns = &dev.nsio;
     if (qcount <= 0 || qcount > ns->qcount) {
     	printf("error: qcount limit %ld\r\n", ns->qcount);
@@ -229,7 +229,7 @@ int unvme_lat_test(int runtime_in, int qcount_in, int qsize_in, int pci, int nsi
     if (!qsize) qsize = ns->qsize;
 
     printf("%s qc=%d/%ld qs=%d/%ld bc=%#llx bs=%d mbio=%d\n",
-            ns->device, qcount, ns->qcount, qsize, ns->qsize,
+            PCI_DEV_NAME, qcount, ns->qcount, qsize, ns->qsize,
             ns->blockcount, ns->blocksize, ns->maxbpio);
 
     run_test("read", 0);

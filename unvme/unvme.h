@@ -40,6 +40,7 @@
 #include <stdint.h>
 #include "unvme_mem.h"
 #include "unvme_nvme.h"
+#include "../params.h"
 
 #ifndef _U_TYPE
 #define _U_TYPE                     ///< bit size data types
@@ -53,16 +54,10 @@ typedef uint32_t        u32;        ///< 32-bit unsigned
 typedef uint64_t        u64;        ///< 64-bit unsigned
 #endif // _U_TYPE
 
-#define UNVME_TIMEOUT   60          ///< default timeout in seconds
-#define UNVME_QSIZE     256         ///< default I/O queue size
-#define UNVME_QCOUNT    31
-
 /// Namespace attributes structure
 typedef struct _unvme_ns {
-    u32                 pci;        ///< PCI device id
     u16                 id;         ///< namespace id
     u16                 vid;        ///< vendor id
-    char                device[16]; ///< PCI device name (BB:DD.F/N)
     char                mn[40];     ///< model number
     char                sn[20];     ///< serial number
     char                fr[8];      ///< firmware revision
@@ -97,7 +92,7 @@ typedef struct _unvme_iod {
 
 /// IO memory allocation tracking info
 typedef struct _unvme_iomem {
-    mem_dma_t**            map;        ///< dynamic array of allocated memory
+    mem_t**            map;        ///< dynamic array of allocated memory
     int                     size;       ///< array size
     int                     count;      ///< array count
 } unvme_iomem_t;
@@ -124,9 +119,9 @@ typedef struct _unvme_queue {
 	int                     isadmin;
 	nvme_queue_t*           adminq;
     nvme_queue_t            nvmeq;      ///< NVMe associated queue
-    mem_dma_t*             sqdma;      ///< submission queue mem
-    mem_dma_t*             cqdma;      ///< completion queue mem
-    mem_dma_t*             prplist;    ///< PRP list
+    mem_t             sqdma;      ///< submission queue mem
+    mem_t             cqdma;      ///< completion queue mem
+    mem_t             prplist;    ///< PRP list
     u32                     size;       ///< queue depth
     u16                     cid;        ///< next cid to check and use
     int                     cidcount;   ///< number of pending cids
@@ -151,8 +146,8 @@ typedef struct _unvme_device {
 } unvme_device_t;
 
 // Export functions
-int unvme_open(unvme_device_t* dev, int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size);
-int unvme_openq(unvme_device_t* dev, int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size);
+int unvme_open(unvme_device_t* dev);
+int unvme_openq(unvme_device_t* dev);
 int unvme_close(unvme_device_t* dev);
 
 void* unvme_alloc(unvme_device_t* dev, u64 size);

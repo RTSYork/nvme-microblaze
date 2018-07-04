@@ -51,7 +51,7 @@
 /**
  * Main.
  */
-int unvme_api_test(int verbose, int ratio, int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
+int unvme_api_test(int verbose, int ratio)
 {
 	printf("\r\nunvme_api_test test starting...\r\n\n");
 
@@ -59,7 +59,7 @@ int unvme_api_test(int verbose, int ratio, int pci, int nsid, u64 mem_base_pci, 
 
     printf("API TEST BEGIN\n\r");
     unvme_device_t dev;
-    int ret = unvme_open(&dev, pci, nsid, mem_base_pci, mem_base_mb, mem_size);
+    int ret = unvme_open(&dev);
     if (ret) exit(1);
 
     // set large number of I/O and size
@@ -67,7 +67,7 @@ int unvme_api_test(int verbose, int ratio, int pci, int nsid, u64 mem_base_pci, 
     int iocount = ratio * (dev.nsio.qsize - 1);
 
     printf("%s qc=%ld/%ld qs=%ld/%ld bc=%#llx bs=%d maxnlb=%d/%d\n\r",
-            dev.nsio.device, dev.nsio.qcount, dev.nsio.maxqcount, dev.nsio.qsize, dev.nsio.maxqsize,
+            PCI_DEV_NAME, dev.nsio.qcount, dev.nsio.maxqcount, dev.nsio.qsize, dev.nsio.maxqsize,
             dev.nsio.blockcount, dev.nsio.blocksize, maxnlb, dev.nsio.maxbpio);
 
     int q, i, nlb;

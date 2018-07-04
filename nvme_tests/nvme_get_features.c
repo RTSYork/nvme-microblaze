@@ -42,27 +42,27 @@
 
 static mem_device_t memdev;
 static nvme_device_t nvmedev;
-static mem_dma_t* adminsq;
-static mem_dma_t* admincq;
+static mem_t* adminsq;
+static mem_t* admincq;
 
 /**
  * NVMe setup.
  */
-static void nvme_setup(int pci, int aqsize, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
+static void nvme_setup(int aqsize)
 {
-    int ret = mem_create(&memdev, pci, mem_base_pci, mem_base_mb, mem_size);
+    int ret = mem_create(&memdev);
     if (ret) errx(1, "vfio_create");
 
     ret = nvme_create(&nvmedev);
     if (ret) errx(1, "nvme_create");
 
-    adminsq = mem_dma_alloc(&memdev, aqsize * sizeof(nvme_sq_entry_t), 1);
+    adminsq = mem_alloc(&memdev, NULL, aqsize * sizeof(nvme_sq_entry_t), 1);
     if (!adminsq) errx(1, "vfio_dma_alloc");
-    admincq = mem_dma_alloc(&memdev, aqsize * sizeof(nvme_cq_entry_t), 1);
+    admincq = mem_alloc(&memdev, NULL, aqsize * sizeof(nvme_cq_entry_t), 1);
     if (!admincq) errx(1, "vfio_dma_alloc");
 
-    if (!nvme_adminq_setup(&nvmedev, aqsize, adminsq->buf, adminsq->addr,
-                                            admincq->buf, admincq->addr)) {
+    if (!nvme_adminq_setup(&nvmedev, aqsize, adminsq->dma_buf, adminsq->dma_addr,
+                                            admincq->dma_buf, admincq->dma_addr)) {
         errx(1, "nvme_setup_adminq");
     }
 }
@@ -72,8 +72,8 @@ static void nvme_setup(int pci, int aqsize, u64 mem_base_pci, void *mem_base_mb,
  */
 static void nvme_cleanup()
 {
-    mem_dma_free(adminsq);
-    mem_dma_free(admincq);
+    mem_free(adminsq);
+    mem_free(admincq);
     mem_delete(&memdev);
 }
 
@@ -95,20 +95,20 @@ static char* features[] = {
 /**
  * Main program.
  */
-int nvme_get_features(int pci, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
+int nvme_get_features()
 {
 	printf("\r\n%s test starting...\r\n\n", __func__);
 
     int nsid = 1;
 
-    nvme_setup(pci, 8, mem_base_pci, mem_base_mb, mem_size);
-    mem_dma_t* dma = mem_dma_alloc(&memdev, sizeof(nvme_feature_lba_data_t), 0);
-    if (!dma) errx(1, "vfio_dma_alloc");
+    nvme_setup(8);
+    mem_t* mem = mem_alloc(&memdev, NULL, sizeof(nvme_feature_lba_data_t), 0);
+    if (!mem) errx(1, "mem_alloc");
     u32 res;
 
     int fid;
     for (fid = NVME_FEATURE_ARBITRATION; fid <= NVME_FEATURE_ASYNC_EVENT; fid++) {
-        int err = nvme_acmd_get_features(&nvmedev, nsid, fid, dma->addr, 0L, &res);
+        int err = nvme_acmd_get_features(&nvmedev, nsid, fid, mem->dma_addr, 0L, &res);
 
         if (err) {
             printf("%-30s <feature not supported>\n", features[fid]);
