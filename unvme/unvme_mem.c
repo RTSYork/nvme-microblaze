@@ -56,17 +56,16 @@ int mems_max = 0;
  * @param   dev         device context
  * @param   size        size
  * @param   pmb         premapped buffer
- * @return  memory structure pointer or NULL if error.
+ * @return  0 if ok, -1 if error
  */
-mem_t* mem_alloc(mem_device_t* dev, mem_t* mem_in, size_t size, int clear)
+int mem_alloc(mem_device_t* dev, mem_t* mem, size_t size, int clear)
 {
-	mem_t *mem;
 
-	if (!mem_in) {
-		mem = zalloc(sizeof(*mem));
+	if (!mem) {
+		ERROR("Invalid memory entry - cannot be NULL");
+		return -1;
 	}
 	else {
-		mem = mem_in;
 		memset(mem, 0, sizeof(*mem));
 		mem->static_mem = 1;
 	}
@@ -82,7 +81,7 @@ mem_t* mem_alloc(mem_device_t* dev, mem_t* mem_in, size_t size, int clear)
 		if (!mem->static_mem)
 			free(mem);
 		INFO_FN("mems: %d / %d", --mems, mems_max);
-		return NULL;
+		return -1;
 	}
 	mem->dma_buf = dev->membuf + dev->memoff;
 	dev->memoff += size;
@@ -112,7 +111,7 @@ mem_t* mem_alloc(mem_device_t* dev, mem_t* mem_in, size_t size, int clear)
 
     mem->valid = 1;
 
-    return mem;
+    return 0;
 }
 
 /**

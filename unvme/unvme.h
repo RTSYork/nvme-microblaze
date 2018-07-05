@@ -90,13 +90,6 @@ typedef struct _unvme_iod {
     u32                 id;         ///< descriptor id
 } *unvme_iod_t;
 
-/// IO memory allocation tracking info
-typedef struct _unvme_iomem {
-    mem_t**            map;        ///< dynamic array of allocated memory
-    int                     size;       ///< array size
-    int                     count;      ///< array count
-} unvme_iomem_t;
-
 /// IO full descriptor
 typedef struct _unvme_desc {
     void*                   buf;        ///< buffer
@@ -111,7 +104,7 @@ typedef struct _unvme_desc {
     struct _unvme_desc*     next;       ///< next descriptor node
     int                     error;      ///< error status
     int                     cidcount;   ///< number of pending cids
-    u64                     cidmask[];  ///< cid pending bit mask
+    u64                     cidmask[UNVME_QSIZE/8];  ///< cid pending bit mask
 } unvme_desc_t;
 
 /// IO queue entry
@@ -131,6 +124,7 @@ typedef struct _unvme_queue {
     unvme_desc_t*           desclist;   ///< used descriptor list
     unvme_desc_t*           descfree;   ///< free descriptor list
     unvme_desc_t*           descpend;   ///< pending descriptor list
+    unvme_desc_t            descs[UNVME_DESCS];
 } unvme_queue_t;
 
 /// Device context
@@ -139,7 +133,8 @@ typedef struct _unvme_device {
     nvme_device_t           nvmedev;    ///< NVMe device
     unvme_queue_t           adminq;     ///< adminq queue
     int                     refcount;   ///< reference count
-    unvme_iomem_t           iomem;      ///< IO memory tracker
+    mem_t                   iomem[UNVME_IOMEMS]; ///< array of allocated memory
+    int                     iomem_count;      ///< array count
     unvme_ns_t              nscnt;      ///< controller namespace (id=0)
     unvme_ns_t              nsio;       ///< io namespace (id=<0)
     unvme_queue_t           ioqs[UNVME_QCOUNT]; ///< IO queues

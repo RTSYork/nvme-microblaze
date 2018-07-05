@@ -2,6 +2,7 @@
 #include <string.h>
 #include "unvme/unvme.h"
 #include "timer.h"
+#include "benchmark.h"
 
 int read_benchmark() {
 	printf("\r\nRead benchmark running\r\n");

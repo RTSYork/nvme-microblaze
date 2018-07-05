@@ -43,8 +43,8 @@
 
 static mem_device_t memdev;
 static nvme_device_t nvmedev;
-static mem_t* adminsq;
-static mem_t* admincq;
+static mem_t adminsq;
+static mem_t admincq;
 
 /**
  * NVMe setup.
@@ -57,13 +57,13 @@ static void nvme_setup(int aqsize)
     ret = nvme_create(&nvmedev);
     if (ret) errx(1, "nvme_create");
 
-    adminsq = mem_alloc(&memdev, NULL, aqsize * sizeof(nvme_sq_entry_t), 1);
-    if (!adminsq) errx(1, "vfio_dma_alloc");
-    admincq = mem_alloc(&memdev, NULL, aqsize * sizeof(nvme_cq_entry_t), 1);
-    if (!admincq) errx(1, "vfio_dma_alloc");
+    mem_alloc(&memdev, &adminsq, aqsize * sizeof(nvme_sq_entry_t), 1);
+    if (!adminsq.valid) errx(1, "vfio_dma_alloc");
+    mem_alloc(&memdev, &admincq, aqsize * sizeof(nvme_cq_entry_t), 1);
+    if (!admincq.valid) errx(1, "vfio_dma_alloc");
 
-    if (!nvme_adminq_setup(&nvmedev, aqsize, adminsq->dma_buf, adminsq->dma_addr,
-                                            admincq->dma_buf, admincq->dma_addr)) {
+    if (!nvme_adminq_setup(&nvmedev, aqsize, adminsq.dma_buf, adminsq.dma_addr,
+                                            admincq.dma_buf, admincq.dma_addr)) {
         errx(1, "nvme_setup_adminq");
     }
 }
@@ -73,8 +73,8 @@ static void nvme_setup(int aqsize)
  */
 static void nvme_cleanup()
 {
-    mem_free(adminsq);
-    mem_free(admincq);
+    mem_free(&adminsq);
+    mem_free(&admincq);
     mem_delete(&memdev);
 }
 
@@ -154,17 +154,18 @@ int nvme_identify()
     int nsid = 0;
 
     nvme_setup(8);
-    mem_t* mem = mem_alloc(&memdev, NULL, 16384, 0);
-    if (!mem) errx(1, "mem_alloc");
+    mem_t mem;
+    int ret = mem_alloc(&memdev, &mem, 16384, 0);
+    if (ret) errx(1, "mem_alloc");
 
-    if (nvme_acmd_identify(&nvmedev, 0, mem->dma_addr, mem->dma_addr + 4096))
+    if (nvme_acmd_identify(&nvmedev, 0, mem.dma_addr, mem.dma_addr + 4096))
         errx(1, "nvme_acmd_identify 0");
     static nvme_identify_ctlr_t ctlr;
-    memcpy(&ctlr, mem->dma_buf, sizeof(nvme_identify_ctlr_t));
+    memcpy(&ctlr, mem.dma_buf, sizeof(nvme_identify_ctlr_t));
     print_controller(&ctlr);
 
-    u64 nsaddr = mem->dma_addr + 8192;
-    void* nsbuf = mem->dma_buf + 8192;
+    u64 nsaddr = mem.dma_addr + 8192;
+    void* nsbuf = mem.dma_buf + 8192;
 
     if (nsid) {
         if (nsid > ctlr.nn)
@@ -180,7 +181,7 @@ int nvme_identify()
         }
     }
 
-    mem_free(mem);
+    mem_free(&mem);
     nvme_cleanup();
 
     printf("\r\n%s test complete\r\n\n", __func__);

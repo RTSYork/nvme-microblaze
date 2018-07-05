@@ -53,8 +53,8 @@ int main()
 	if (unvme_info()) goto error;
 	if (unvme_get_features()) goto error;
 	if (unvme_sim_test(0, 1024 * 1024)) goto error;
-	if (unvme_api_test(0, 1)) goto error;
-	if (unvme_lat_test(0, 0, 0)) goto error;
+//	if (unvme_api_test(0, 1)) goto error;
+//	if (unvme_lat_test(0, 0, 0)) goto error;
 	printf("\r\nDone\n\r");
 
 	printf("\r\nRunning NVMe tests...\r\n");
@@ -72,10 +72,10 @@ int main()
 ////	if (unvme_wrc('r', 0, 0, 0, 0x1000000, 0, 0, 0, 10)) goto error;
 ////	if (unvme_wrc('r', 0, 1, 0, 0x100000, 0, 0, 0, 10)) goto error;
 
-	if (unvme_wrc('w', 0, 1, 0, 0x10000, 0, 0, 0, 2)) goto error;
-	if (unvme_wrc('r', 0, 1, 0, 0x10000, 0, 0, 0, 2)) goto error;
-	if (unvme_wrc('w', 0, 1, 0, 0x10000, 1, 16, 0, 2)) goto error;
-	if (unvme_wrc('r', 0, 1, 0, 0x10000, 1, 16, 0, 2)) goto error;
+//	if (unvme_wrc('w', 0, 1, 0, 0x10000, 0, 0, 0, 2)) goto error;
+//	if (unvme_wrc('r', 0, 1, 0, 0x10000, 0, 0, 0, 2)) goto error;
+//	if (unvme_wrc('w', 0, 1, 0, 0x10000, 1, 16, 0, 2)) goto error;
+//	if (unvme_wrc('r', 0, 1, 0, 0x10000, 1, 16, 0, 2)) goto error;
 
 	if (read_benchmark()) goto error;
 	if (write_benchmark()) goto error;

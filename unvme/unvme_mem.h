@@ -81,7 +81,7 @@ typedef struct _mem_device {
 // Export functions
 int mem_create(mem_device_t* dev);
 void mem_delete(mem_device_t* dev);
-mem_t* mem_alloc(mem_device_t* dev, mem_t* mem, size_t size, int clear);
+int mem_alloc(mem_device_t* dev, mem_t* mem, size_t size, int clear);
 int mem_free(mem_t* mem);
 
 #endif // _UNVME_MEM_H

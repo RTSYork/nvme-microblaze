@@ -42,8 +42,8 @@
 
 static mem_device_t memdev;
 static nvme_device_t nvmedev;
-static mem_t* adminsq;
-static mem_t* admincq;
+static mem_t adminsq;
+static mem_t admincq;
 
 /**
  * NVMe setup.
@@ -56,13 +56,13 @@ static void nvme_setup(int aqsize)
     ret = nvme_create(&nvmedev);
     if (ret) errx(1, "nvme_create");
 
-    adminsq = mem_alloc(&memdev, NULL, aqsize * sizeof(nvme_sq_entry_t), 1);
-    if (!adminsq) errx(1, "vfio_dma_alloc");
-    admincq = mem_alloc(&memdev, NULL, aqsize * sizeof(nvme_cq_entry_t), 1);
-    if (!admincq) errx(1, "vfio_dma_alloc");
+    mem_alloc(&memdev, &adminsq, aqsize * sizeof(nvme_sq_entry_t), 1);
+    if (!adminsq.valid) errx(1, "vfio_dma_alloc");
+    mem_alloc(&memdev, &admincq, aqsize * sizeof(nvme_cq_entry_t), 1);
+    if (!admincq.valid) errx(1, "vfio_dma_alloc");
 
-    if (!nvme_adminq_setup(&nvmedev, aqsize, adminsq->dma_buf, adminsq->dma_addr,
-                                            admincq->dma_buf, admincq->dma_addr)) {
+    if (!nvme_adminq_setup(&nvmedev, aqsize, adminsq.dma_buf, adminsq.dma_addr,
+                                            admincq.dma_buf, admincq.dma_addr)) {
         errx(1, "nvme_setup_adminq");
     }
 }
@@ -72,8 +72,8 @@ static void nvme_setup(int aqsize)
  */
 static void nvme_cleanup()
 {
-    mem_free(adminsq);
-    mem_free(admincq);
+    mem_free(&adminsq);
+    mem_free(&admincq);
     mem_delete(&memdev);
 }
 
@@ -102,13 +102,14 @@ int nvme_get_features()
     int nsid = 1;
 
     nvme_setup(8);
-    mem_t* mem = mem_alloc(&memdev, NULL, sizeof(nvme_feature_lba_data_t), 0);
-    if (!mem) errx(1, "mem_alloc");
+    mem_t mem;
+	int ret = mem_alloc(&memdev, &mem, sizeof(nvme_feature_lba_data_t), 0);
+    if (ret) errx(1, "mem_alloc");
     u32 res;
 
     int fid;
     for (fid = NVME_FEATURE_ARBITRATION; fid <= NVME_FEATURE_ASYNC_EVENT; fid++) {
-        int err = nvme_acmd_get_features(&nvmedev, nsid, fid, mem->dma_addr, 0L, &res);
+        int err = nvme_acmd_get_features(&nvmedev, nsid, fid, mem.dma_addr, 0L, &res);
 
         if (err) {
             printf("%-30s <feature not supported>\n", features[fid]);

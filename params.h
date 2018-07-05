@@ -15,6 +15,8 @@
 #define UNVME_TIMEOUT   60          ///< default timeout in seconds
 #define UNVME_AQSIZE    8           ///< admin queue size
 #define UNVME_QSIZE     256         ///< default I/O queue size
-#define UNVME_QCOUNT    2
+#define UNVME_QCOUNT    1
+#define UNVME_DESCS     16
+#define UNVME_IOMEMS    256
 
 #endif // SRC_PARAMS_H_
