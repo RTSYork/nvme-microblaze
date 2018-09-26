@@ -8,10 +8,7 @@
 #include "unvme_tests/unvme_tests.h"
 #include "nvme_tests/nvme_tests.h"
 #include "benchmark.h"
-
-#define MEM_BASE_MB (void *)0x00000000
-#define MEM_BASE_PCI 0x500000000
-#define MEM_SIZE 0x80000000
+#include "params.h"
 
 XTmrCtr timer;
 
@@ -20,7 +17,7 @@ int main()
 	init_platform();
 
 	printf("\n\r***********************************************************\n\r");
-	printf("NVMe test\n\r");
+	printf("Simple NVMe test\n\r");
 
 //	pvr_t pvr;
 //	microblaze_get_pvr(&pvr);
@@ -53,35 +50,35 @@ int main()
 //	}
 
 	printf("\r\nRunning UNVMe tests...\r\n");
-	if (unvme_info(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error;
-	if (unvme_get_features(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error;
-	if (unvme_sim_test(0, 1024 * 1024, 0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error;
-	if (unvme_api_test(0, 1, 0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error;
-	if (unvme_lat_test(0, 0, 0, 0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error;
+	if (unvme_info()) goto error;
+	if (unvme_get_features()) goto error;
+	if (unvme_sim_test(0, 1024 * 1024)) goto error;
+//	if (unvme_api_test(0, 1)) goto error;
+//	if (unvme_lat_test(0, 0, 0)) goto error;
 	printf("\r\nDone\n\r");
 
 	printf("\r\nRunning NVMe tests...\r\n");
-	if (nvme_identify(0x010000, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error;
-	if (nvme_get_features(0x010000, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error;
-	if (nvme_get_log_page(0x010000, 1, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error; // error information
-	if (nvme_get_log_page(0x010000, 2, -1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error; // SMART / Health information (device doesn't respond)
-	if (nvme_get_log_page(0x010000, 3, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error; // firmware slot information
+	if (nvme_identify()) goto error;
+	if (nvme_get_features()) goto error;
+	if (nvme_get_log_page(1, 1)) goto error; // error information
+	if (nvme_get_log_page(2, -1)) goto error; // SMART / Health information
+	if (nvme_get_log_page(3, 1)) goto error; // firmware slot information
 	printf("\r\nDone\n\r");
 
-////	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'w', 0, 0, 0, 0x1000000, 0, 0, 0, 0)) goto error;
-////	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'r', 0, 0, 0, 0x1000, 0, 0, 0, 0)) goto error;
-////	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'r', 0, 0, 0, 0x10000, 0, 0, 0, 0)) goto error;
-////	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'r', 0, 0, 0, 0x100000, 0, 0, 0, 0)) goto error;
-////	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'r', 0, 0, 0, 0x1000000, 0, 0, 0, 10)) goto error;
-////	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'r', 0, 1, 0, 0x100000, 0, 0, 0, 10)) goto error;
+////	if (unvme_wrc('w', 0, 0, 0, 0x1000000, 0, 0, 0, 0)) goto error;
+////	if (unvme_wrc('r', 0, 0, 0, 0x1000, 0, 0, 0, 0)) goto error;
+////	if (unvme_wrc('r', 0, 0, 0, 0x10000, 0, 0, 0, 0)) goto error;
+////	if (unvme_wrc('r', 0, 0, 0, 0x100000, 0, 0, 0, 0)) goto error;
+////	if (unvme_wrc('r', 0, 0, 0, 0x1000000, 0, 0, 0, 10)) goto error;
+////	if (unvme_wrc('r', 0, 1, 0, 0x100000, 0, 0, 0, 10)) goto error;
 
-	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'w', 0, 1, 0, 0x10000, 0, 0, 0, 2)) goto error;
-	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'r', 0, 1, 0, 0x10000, 0, 0, 0, 2)) goto error;
-	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'w', 0, 1, 0, 0x10000, 31, 0, 0, 2)) goto error;
-	if (unvme_wrc(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE, 'r', 0, 1, 0, 0x10000, 31, 0, 0, 2)) goto error;
+//	if (unvme_wrc('w', 0, 1, 0, 0x10000, 0, 0, 0, 2)) goto error;
+//	if (unvme_wrc('r', 0, 1, 0, 0x10000, 0, 0, 0, 2)) goto error;
+//	if (unvme_wrc('w', 0, 1, 0, 0x10000, 1, 16, 0, 2)) goto error;
+//	if (unvme_wrc('r', 0, 1, 0, 0x10000, 1, 16, 0, 2)) goto error;
 
-	if (read_benchmark(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error;
-	if (write_benchmark(0x010000, 1, MEM_BASE_PCI, MEM_BASE_MB, MEM_SIZE)) goto error;
+	if (read_benchmark()) goto error;
+	if (write_benchmark()) goto error;
 
 	cleanup_platform();
 	return 0;

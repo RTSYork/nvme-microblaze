@@ -61,17 +61,18 @@ static char* features[] = {
 /**
  * Main program.
  */
-int unvme_get_features(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
+int unvme_get_features()
 {
 	printf("\r\nunvme_get_features test starting...\r\n\n");
 
-    const unvme_ns_t* ns = unvme_open(pci, nsid, mem_base_pci, mem_base_mb, mem_size);
-    if (!ns) {
+    unvme_device_t dev;
+    int ret = unvme_open(&dev);
+    if (ret) {
     	printf("error: unvme_open\r\n");
     	return 1;
     }
     u64 bufsz = sizeof(nvme_feature_lba_data_t);
-    void* buf = unvme_alloc(ns, bufsz);
+    void* buf = unvme_alloc(&dev, bufsz);
     if (!buf) {
     	printf("error: unvme_alloc\r\n");
     	return 1;
@@ -82,7 +83,7 @@ int unvme_get_features(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, s
     int fid;
     for (fid = NVME_FEATURE_ARBITRATION; fid <= NVME_FEATURE_ASYNC_EVENT; fid++) {
         cdw10_15[0] = fid;
-        int err = unvme_cmd(ns, -1, NVME_ACMD_GET_FEATURES, nsid, buf, bufsz, cdw10_15, &res);
+        int err = unvme_cmd(&dev, -1, NVME_ACMD_GET_FEATURES, NSID, buf, bufsz, cdw10_15, &res);
 
         if (err) {
             printf("%-30s <feature not supported>\n\r", features[fid]);
@@ -123,8 +124,8 @@ int unvme_get_features(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, s
         }
     }
 
-    unvme_free(ns, buf);
-    unvme_close(ns);
+    unvme_free(&dev, buf);
+    unvme_close(&dev);
 
     printf("\r\nunvme_get_features test complete\r\n");
     return 0;

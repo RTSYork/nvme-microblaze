@@ -17,20 +17,22 @@
 #include "../unvme/unvme.h"
 
 #include "../timer.h"
+#include "../params.h"
 
 #define errx(code, fmt, arg...) do { printf("error: " fmt "\n\r", ##arg); exit(code); } while (0)
 
 #define PDEBUG(fmt, arg...)     //fprintf(stderr, fmt "\n", ##arg)
 
 // Global static variables
+static unvme_device_t dev; ///< namespace handle
 static const unvme_ns_t* ns;    ///< namespace handle
 static u32 rw = 0;              ///< read-write flag
 static u64 startlba = 0;        ///< starting LBA
 static u64 lbacount = 0;        ///< LBA count
 static u64 pattern = 0;         ///< 64-bit data pattern
 static u64 patinc = 0;          ///< pattern increment per LBA
-static u32 qcount = 16;         ///< IO queue count
-static u32 qdepth = 64;         ///< IO queue depth
+static u32 qcount = UNVME_QCOUNT; ///< IO queue count
+static u32 qdepth = UNVME_QSIZE-1;  ///< IO queue depth
 static u32 nbpio = 0;           ///< number of blocks per IO
 static u64 dumptime = 0;     ///< interval to display data
 static int dump = 0;            ///< dump count
@@ -92,11 +94,11 @@ unvme_iod_t submit(int q, int d, void* buf, u64 lba, u32 nlb)
             }
         }
         PDEBUG("@W q%d.%d %p %#lx %d", q, d, buf, lba, nlb);
-        iod = unvme_awrite(ns, q, buf, lba, nlb);
+        iod = unvme_awrite(&dev, q, buf, lba, nlb);
         if (!iod) errx(1, "unvme_awrite q=%d lba=%#llx nlb=%#lx failed", q, lba, nlb);
     } else {
         PDEBUG("@R q%d.%d %p %#lx %d", q,  d, buf, lba, nlb);
-        iod = unvme_aread(ns, q, buf, lba, nlb);
+        iod = unvme_aread(&dev, q, buf, lba, nlb);
         if (!iod) errx(1, "unvme_aread q=%d lba=%#llx nlb=%#lx failed", q, lba, nlb);
     }
     return iod;
@@ -105,7 +107,7 @@ unvme_iod_t submit(int q, int d, void* buf, u64 lba, u32 nlb)
 /*
  * Main.
  */
-int unvme_wrc(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size, u32 rw_in, u64 pattern_in, u64 patinc_in, u64 startlba_in, u64 lbacount_in, u32 qcount_in, u32 qdepth_in, u32 nbpio_in, u64 dumptime_in)
+int unvme_wrc(u32 rw_in, u64 pattern_in, u64 patinc_in, u64 startlba_in, u64 lbacount_in, u32 qcount_in, u32 qdepth_in, u32 nbpio_in, u64 dumptime_in)
 {
 /*
     const char* usage = "Usage: %s [OPTION]... PCINAME\n\
@@ -139,25 +141,26 @@ int unvme_wrc(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem
 
     // open device and allocate buffer
     u64 tstart = timer_get_value();
-    ns = unvme_open(pci, nsid, mem_base_pci, mem_base_mb, mem_size);
-    if (!ns) exit(1);
+    int ret = unvme_open(&dev);
+    if (ret) exit(1);
+    ns = &dev.nsio;
     if ((startlba + lbacount) > ns->blockcount) {
-        unvme_close(ns);
+        unvme_close(&dev);
         errx(1, "max block count is %#llx", ns->blockcount);
     }
     if (qcount > ns->qcount || qdepth >= ns->qsize) {
-        unvme_close(ns);
+        unvme_close(&dev);
         errx(1, "max qcount=%ld qdepth=%ld", ns->qcount, ns->qsize-1);
     }
     if (lbacount == 0) lbacount = ns->blockcount - startlba;
     if (nbpio == 0) nbpio = ns->maxbpio;
     if (nbpio > ns->maxbpio || (nbpio % ns->nbpp)) {
-        unvme_close(ns);
+        unvme_close(&dev);
         errx(1, "invalid nbpio %ld", nbpio);
     }
 
     printf("%s qc=%ld/%ld qd=%ld/%ld bc=%#llx bs=%d nbpio=%ld/%d\n",
-            ns->device, qcount, ns->qcount, qdepth, ns->qsize-1,
+            PCI_DEV_NAME, qcount, ns->qcount, qdepth, ns->qsize-1,
             ns->blockcount, ns->blocksize, nbpio, ns->maxbpio);
 
     int iomax = qcount * qdepth;
@@ -166,7 +169,7 @@ int unvme_wrc(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem
 
     int iobufsize = nbpio * ns->blocksize;
     for (i = 0; i < iomax; i++) {
-        iobufs[i] = unvme_alloc(ns, iobufsize);
+        iobufs[i] = unvme_alloc(&dev, iobufsize);
         if (!iobufs[i]) errx(1, "unvme_alloc %#x failed", iobufsize);
     }
 
@@ -311,11 +314,11 @@ int unvme_wrc(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem
         }
     }
 
-    for (i = 0; i < iomax; i++) unvme_free(ns, iobufs[i]);
+    for (i = 0; i < iomax; i++) unvme_free(&dev, iobufs[i]);
     free(fixedbuf);
     free(iobufs);
     free(iods);
-    unvme_close(ns);
+    unvme_close(&dev);
 
     if (!mismatch) printf("Completion time: %lld seconds\n", (timer_get_value() - tstart) / TIMER_TICKS_PER_SECOND);
 

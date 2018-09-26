@@ -57,7 +57,8 @@ typedef struct {
 } lat_page_t;
 
 // Global variables
-static const unvme_ns_t* ns;    ///< unvme namespace pointer
+static unvme_device_t dev; ///< unvme namespace pointer
+static const unvme_ns_t *ns;    ///< unvme namespace pointer
 static int qcount = 1;          ///< queue count
 static int qsize = 8;           ///< queue size
 static int runtime = 15;        ///< run time in seconds
@@ -82,13 +83,13 @@ static void io_submit(int q, int rw, lat_page_t* p)
 
     p->tsc = rdtsc();
     if (rw) {
-        p->iod = unvme_awrite(ns, q, p->buf, p->lba, ns->nbpp);
+        p->iod = unvme_awrite(&dev, q, p->buf, p->lba, ns->nbpp);
         if (!p->iod) {
         	IOERROR("awrite", p);
            	return;
         }
     } else {
-        p ->iod = unvme_aread(ns, q, p->buf, p->lba, ns->nbpp);
+        p ->iod = unvme_aread(&dev, q, p->buf, p->lba, ns->nbpp);
         if (!p->iod) {
         	IOERROR("aread", p);
         	return;
@@ -116,7 +117,7 @@ static void* run_thread(void* arg)
     lat_page_t* p = pages;
     int i;
     for (i = 0; i < ns->maxiopq; i++) {
-        p->buf = unvme_alloc(ns, ns->pagesize);
+        p->buf = unvme_alloc(&dev, ns->pagesize);
         lba += (ns->nbpp << 1);
         if (lba > last_lba) lba = i * ns->nbpp;
         p->lba = lba;
@@ -151,7 +152,7 @@ static void* run_thread(void* arg)
 
     p = pages;
     for (i = 0; i < ns->maxiopq; i++) {
-        unvme_free(ns, p->buf);
+        unvme_free(&dev, p->buf);
         p++;
     }
     free(pages);
@@ -201,7 +202,7 @@ void run_test(const char* name, int rw)
 /**
  * Main program.
  */
-int unvme_lat_test(int runtime_in, int qcount_in, int qsize_in, int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
+int unvme_lat_test(int runtime_in, int qcount_in, int qsize_in)
 {
 	printf("\r\nunvme_lat_test test starting...\r\n\n");
 
@@ -212,7 +213,8 @@ int unvme_lat_test(int runtime_in, int qcount_in, int qsize_in, int pci, int nsi
 
     printf("LATENCY TEST BEGIN\n");
     time_t tstart = timer_get_value();
-    if (!(ns = unvme_open(pci, nsid, mem_base_pci, mem_base_mb, mem_size))) exit(1);
+    if (unvme_open(&dev)) exit(1);
+    ns = &dev.nsio;
     if (qcount <= 0 || qcount > ns->qcount) {
     	printf("error: qcount limit %ld\r\n", ns->qcount);
     	return 1;
@@ -227,13 +229,13 @@ int unvme_lat_test(int runtime_in, int qcount_in, int qsize_in, int pci, int nsi
     if (!qsize) qsize = ns->qsize;
 
     printf("%s qc=%d/%ld qs=%d/%ld bc=%#llx bs=%d mbio=%d\n",
-            ns->device, qcount, ns->qcount, qsize, ns->qsize,
+            PCI_DEV_NAME, qcount, ns->qcount, qsize, ns->qsize,
             ns->blockcount, ns->blocksize, ns->maxbpio);
 
     run_test("read", 0);
     run_test("write", 1);
 
-    unvme_close(ns);
+    unvme_close(&dev);
 
     printf("LATENCY TEST COMPLETE (%lld secs)\n", (timer_get_value() - tstart) / TIMER_TICKS_PER_SECOND);
 

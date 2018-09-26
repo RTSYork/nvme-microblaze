@@ -44,14 +44,9 @@
  * @param   qsize       io queue size
  * @return  namespace pointer or NULL if error.
  */
-const unvme_ns_t* unvme_openq(int pci, int nsid, int qcount, int qsize, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
+int unvme_openq(unvme_device_t* dev)
 {
-    if (qcount < 0 || qsize < 0 || qsize == 1) {
-        ERROR("invalid qcount %d or qsize %d", qcount, qsize);
-        return NULL;
-    }
-
-    return unvme_do_open(pci, nsid, qcount, qsize, mem_base_pci, mem_base_mb, mem_size);
+    return unvme_do_open(dev);
 }
 
 /**
@@ -59,9 +54,9 @@ const unvme_ns_t* unvme_openq(int pci, int nsid, int qcount, int qsize, u64 mem_
  * @param   pciname     PCI device name (as %x:%x.%x[/NSID] format)
  * @return  namespace pointer or NULL if error.
  */
-const unvme_ns_t* unvme_open(int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
+int unvme_open(unvme_device_t* dev)
 {
-    return unvme_openq(pci, nsid, 0, 0, mem_base_pci, mem_base_mb, mem_size);
+    return unvme_openq(dev);
 }
 
 /**
@@ -69,9 +64,9 @@ const unvme_ns_t* unvme_open(int pci, int nsid, u64 mem_base_pci, void *mem_base
  * @param   ns          namespace handle
  * @return  0 if ok else error code.
  */
-int unvme_close(const unvme_ns_t* ns)
+int unvme_close(unvme_device_t* dev)
 {
-    return unvme_do_close(ns);
+    return unvme_do_close(dev);
 }
 
 /**
@@ -80,9 +75,9 @@ int unvme_close(const unvme_ns_t* ns)
  * @param   size        buffer size
  * @return  the allocated buffer or NULL if failure.
  */
-void* unvme_alloc(const unvme_ns_t* ns, u64 size)
+void* unvme_alloc(unvme_device_t* dev, u64 size)
 {
-    return unvme_do_alloc(ns, size);
+    return unvme_do_alloc(dev, size);
 }
 
 /**
@@ -91,9 +86,9 @@ void* unvme_alloc(const unvme_ns_t* ns, u64 size)
  * @param   buf         buffer pointer
  * @return  0 if ok else -1.
  */
-int unvme_free(const unvme_ns_t* ns, void* buf)
+int unvme_free(unvme_device_t* dev, void* buf)
 {
-    return unvme_do_free(ns, buf);
+    return unvme_do_free(dev, buf);
 }
 
 /**
@@ -107,10 +102,10 @@ int unvme_free(const unvme_ns_t* ns, void* buf)
  * @param   cdw10_15    NVMe command word 10 through 15
  * @return  descriptor or NULL if failed.
  */
-inline unvme_iod_t unvme_acmd(const unvme_ns_t* ns, int qid, int opc, int nsid,
+inline unvme_iod_t unvme_acmd(unvme_device_t* dev, int qid, int opc, int nsid,
                               void* buf, u64 bufsz, u32 cdw10_15[6])
 {
-    return (unvme_iod_t)unvme_do_cmd(ns, qid, opc, nsid, buf, bufsz, cdw10_15);
+    return (unvme_iod_t)unvme_do_cmd(dev, qid, opc, nsid, buf, bufsz, cdw10_15);
 }
 
 /**
@@ -122,9 +117,9 @@ inline unvme_iod_t unvme_acmd(const unvme_ns_t* ns, int qid, int opc, int nsid,
  * @param   nlb         number of logical blocks
  * @return  I/O descriptor or NULL if failed.
  */
-inline unvme_iod_t unvme_aread(const unvme_ns_t* ns, int qid, void* buf, u64 slba, u32 nlb)
+inline unvme_iod_t unvme_aread(unvme_device_t* dev, int qid, void* buf, u64 slba, u32 nlb)
 {
-    return (unvme_iod_t)unvme_do_rw(ns, qid, NVME_CMD_READ, buf, slba, nlb);
+    return (unvme_iod_t)unvme_do_rw(dev, qid, NVME_CMD_READ, buf, slba, nlb);
 }
 
 /**
@@ -136,10 +131,10 @@ inline unvme_iod_t unvme_aread(const unvme_ns_t* ns, int qid, void* buf, u64 slb
  * @param   nlb         number of logical blocks
  * @return  I/O descriptor or NULL if failed.
  */
-inline unvme_iod_t unvme_awrite(const unvme_ns_t* ns, int qid,
+inline unvme_iod_t unvme_awrite(unvme_device_t* dev, int qid,
                          const void* buf, u64 slba, u32 nlb)
 {
-    return (unvme_iod_t)unvme_do_rw(ns, qid, NVME_CMD_WRITE, (void*)buf, slba, nlb);
+    return (unvme_iod_t)unvme_do_rw(dev, qid, NVME_CMD_WRITE, (void*)buf, slba, nlb);
 }
 
 /**
@@ -179,10 +174,10 @@ inline int unvme_apoll_cs(unvme_iod_t iod, int timeout, u32* cqe_cs)
  * @param   cqe_cs      CQE command specific DW0 returned
  * @return  descriptor or NULL if failed.
  */
-int unvme_cmd(const unvme_ns_t* ns, int qid, int opc, int nsid,
+int unvme_cmd(unvme_device_t* dev, int qid, int opc, int nsid,
               void* buf, u64 bufsz, u32 cdw10_15[6], u32* cqe_cs)
 {
-    unvme_iod_t iod = unvme_acmd(ns, qid, opc, nsid, buf, bufsz, cdw10_15);
+    unvme_iod_t iod = unvme_acmd(dev, qid, opc, nsid, buf, bufsz, cdw10_15);
     if (iod) {
         return unvme_apoll_cs(iod, UNVME_TIMEOUT, cqe_cs);
     }
@@ -198,9 +193,9 @@ int unvme_cmd(const unvme_ns_t* ns, int qid, int opc, int nsid,
  * @param   nlb         number of logical blocks
  * @return  0 if ok else error status.
  */
-int unvme_read(const unvme_ns_t* ns, int qid, void* buf, u64 slba, u32 nlb)
+int unvme_read(unvme_device_t* dev, int qid, void* buf, u64 slba, u32 nlb)
 {
-    unvme_iod_t iod = unvme_aread(ns, qid, buf, slba, nlb);
+    unvme_iod_t iod = unvme_aread(dev, qid, buf, slba, nlb);
     if (iod) {
         return unvme_apoll(iod, UNVME_TIMEOUT);
     }
@@ -216,10 +211,10 @@ int unvme_read(const unvme_ns_t* ns, int qid, void* buf, u64 slba, u32 nlb)
  * @param   nlb         number of logical blocks
  * @return  0 if ok else error status.
  */
-int unvme_write(const unvme_ns_t* ns, int qid,
+int unvme_write(unvme_device_t* dev, int qid,
                 const void* buf, u64 slba, u32 nlb)
 {
-    unvme_iod_t iod = unvme_awrite(ns, qid, buf, slba, nlb);
+    unvme_iod_t iod = unvme_awrite(dev, qid, buf, slba, nlb);
     if (iod) {
         return unvme_apoll(iod, UNVME_TIMEOUT);
     }
