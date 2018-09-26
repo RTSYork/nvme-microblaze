@@ -98,18 +98,6 @@ static inline void hex_dump(void* buf, int len)
     INFO("%s", ss);
 }
 
-/**
- * Invoke calloc and terminated on failure.
- */
-static inline void* zalloc(int size)
-{
-    void* mem = calloc(1, size);
-    if (!mem) {
-        ERROR("calloc");
-        abort();
-    }
-    return mem;
-}
 
 #endif // _UNVME_LOG_H
 

@@ -563,7 +563,6 @@ typedef struct _nvme_queue {
     int                     sq_tail;    ///< submission queue tail
     int                     cq_head;    ///< completion queue head
     u16                     cq_phase;   ///< completion queue phase bit
-    u16                     ext;        ///< externally allocated flag
 } nvme_queue_t;
 
 /// Device context
@@ -580,16 +579,14 @@ typedef struct _nvme_device {
     u16                     pageshift;  ///< minimum pagesize shift
     u16                     mpsmin;     ///< MPSMIN
     u16                     mpsmax;     ///< MPSMAX
-    u16                     ext;        ///< externally allocated flag
 } nvme_device_t;
 
 
 // Export functions
-nvme_device_t* nvme_create(nvme_device_t* dev);
-void nvme_delete(nvme_device_t* dev);
+int nvme_create(nvme_device_t* dev);
 
 nvme_queue_t* nvme_adminq_setup(nvme_device_t* dev, int qsize, void* sqbuf, u64 sqpa, void* cqbuf, u64 cqpa);
-nvme_queue_t* nvme_ioq_create(nvme_device_t* dev, nvme_queue_t* ioq, int id, int qsize, void* sqbuf, u64 sqpa, void* cqbuf, u64 cqpa);
+int nvme_ioq_create(nvme_device_t* dev, nvme_queue_t* ioq, int id, int qsize, void* sqbuf, u64 sqpa, void* cqbuf, u64 cqpa);
 int nvme_ioq_delete(nvme_queue_t* ioq);
 
 int nvme_acmd_identify(nvme_device_t* dev, int nsid, u64 prp1, u64 prp2);

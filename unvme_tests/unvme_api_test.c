@@ -51,23 +51,24 @@
 /**
  * Main.
  */
-int unvme_api_test(int verbose, int ratio, int pci, int nsid, u64 mem_base_pci, void *mem_base_mb, size_t mem_size)
+int unvme_api_test(int verbose, int ratio)
 {
 	printf("\r\nunvme_api_test test starting...\r\n\n");
 
     if (ratio < 1) ratio = 4;
 
     printf("API TEST BEGIN\n\r");
-    const unvme_ns_t* ns = unvme_open(pci, nsid, mem_base_pci, mem_base_mb, mem_size);
-    if (!ns) exit(1);
+    unvme_device_t dev;
+    int ret = unvme_open(&dev);
+    if (ret) exit(1);
 
     // set large number of I/O and size
-    int maxnlb = ratio * ns->maxbpio;
-    int iocount = ratio * (ns->qsize - 1);
+    int maxnlb = ratio * dev.nsio.maxbpio;
+    int iocount = ratio * (dev.nsio.qsize - 1);
 
     printf("%s qc=%ld/%ld qs=%ld/%ld bc=%#llx bs=%d maxnlb=%d/%d\n\r",
-            ns->device, ns->qcount, ns->maxqcount, ns->qsize, ns->maxqsize,
-            ns->blockcount, ns->blocksize, maxnlb, ns->maxbpio);
+            PCI_DEV_NAME, dev.nsio.qcount, dev.nsio.maxqcount, dev.nsio.qsize, dev.nsio.maxqsize,
+            dev.nsio.blockcount, dev.nsio.blocksize, maxnlb, dev.nsio.maxbpio);
 
     int q, i, nlb;
     u64 slba, size, w, *p;
@@ -75,7 +76,7 @@ int unvme_api_test(int verbose, int ratio, int pci, int nsid, u64 mem_base_pci, 
     void** buf = malloc(iocount * sizeof(void*));
 
     u64 tstart = timer_get_value();
-    for (q = 0; q < ns->qcount; q++) {
+    for (q = 0; q < dev.nsio.qcount; q++) {
         printf("> Test q=%d ioc=%d\n\r", q, iocount);
         u64 t = 0;//timer_get_value();
 
@@ -83,9 +84,9 @@ int unvme_api_test(int verbose, int ratio, int pci, int nsid, u64 mem_base_pci, 
         srandom(t);
         for (i = 0; i < iocount; i++) {
             nlb = random() % maxnlb + 1;
-            size = nlb * ns->blocksize;
+            size = nlb * dev.nsio.blocksize;
             VERBOSE("  alloc.%-2d  %#8x %#llx\n\r", i, nlb, size);
-            if (!(buf[i] = unvme_alloc(ns, size))) {
+            if (!(buf[i] = unvme_alloc(&dev, size))) {
             	printf("error: alloc.%d failed\r\n", i);
             	return 1;
             }
@@ -96,11 +97,11 @@ int unvme_api_test(int verbose, int ratio, int pci, int nsid, u64 mem_base_pci, 
         slba = 0;
         for (i = 0; i < iocount; i++) {
             nlb = random() % maxnlb + 1;
-            size = nlb * ns->blocksize / sizeof(u64);
+            size = nlb * dev.nsio.blocksize / sizeof(u64);
             p = buf[i];
             for (w = 0; w < size; w++) p[w] = (w << 32) + i;
             VERBOSE("  awrite.%-2d %#8x %p %#llx\n\r", i, nlb, p, slba);
-            if (!(iod[i] = unvme_awrite(ns, q, p, slba, nlb))) {
+            if (!(iod[i] = unvme_awrite(&dev, q, p, slba, nlb))) {
             	printf("error: awrite.%d failed\r\n", i);
             	return 1;
             }
@@ -121,11 +122,11 @@ int unvme_api_test(int verbose, int ratio, int pci, int nsid, u64 mem_base_pci, 
         slba = 0;
         for (i = 0; i < iocount; i++) {
             nlb = random() % maxnlb + 1;
-            size = nlb * ns->blocksize;
+            size = nlb * dev.nsio.blocksize;
             p = buf[i];
             for (int i = 0; i < size/sizeof(u64); i++) p[i] = 0;
             VERBOSE("  aread.%-2d  %#8x %p %#llx\n\r", i, nlb, p, slba);
-            if (!(iod[i] = unvme_aread(ns, q, p, slba, nlb))) {
+            if (!(iod[i] = unvme_aread(&dev, q, p, slba, nlb))) {
             	printf("error: aread.%d failed\r\n", i);
             	return 1;
             }
@@ -146,14 +147,14 @@ int unvme_api_test(int verbose, int ratio, int pci, int nsid, u64 mem_base_pci, 
         slba = 0;
         for (i = 0; i < iocount; i++) {
             nlb = random() % maxnlb + 1;
-            size = nlb * ns->blocksize / sizeof(u64);
+            size = nlb * dev.nsio.blocksize / sizeof(u64);
             p = buf[i];
             VERBOSE("  verify.%-2d %#8x %p %#llx\n\r", i, nlb, p, slba);
             for (w = 0; w < size; w++) {
                 if (p[w] != ((w << 32) + i)) {
                     w *= sizeof(w);
-                    slba += w / ns->blocksize;
-                    w %= ns->blocksize;
+                    slba += w / dev.nsio.blocksize;
+                    w %= dev.nsio.blocksize;
                     printf("error: miscompare at lba %#llx offset %#llx\r\n", slba, w);
                     return 1;
                 }
@@ -164,7 +165,7 @@ int unvme_api_test(int verbose, int ratio, int pci, int nsid, u64 mem_base_pci, 
         printf("Test free\n\r");
         for (i = 0; i < iocount; i++) {
             VERBOSE("  free.%-2d\n\r", i);
-            if (unvme_free(ns, buf[i])) {
+            if (unvme_free(&dev, buf[i])) {
             	printf("error: free.%d failed\r\n", i);
             	return 1;
             }
@@ -173,7 +174,7 @@ int unvme_api_test(int verbose, int ratio, int pci, int nsid, u64 mem_base_pci, 
 
     free(buf);
     free(iod);
-    unvme_close(ns);
+    unvme_close(&dev);
 
     printf("API TEST COMPLETE (%lld secs)\n\r", (timer_get_value() - tstart) / TIMER_TICKS_PER_SECOND);
 
