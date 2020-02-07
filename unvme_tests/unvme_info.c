@@ -41,7 +41,7 @@
 
 #include "unvme_tests.h"
 
-#include "../unvme/unvme.h"
+#include "../nvme/nvme.h"
 
 
 int unvme_info()

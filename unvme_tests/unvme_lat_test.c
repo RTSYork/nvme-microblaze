@@ -42,8 +42,8 @@
 #include <pthread.h>
 #include <sched.h>
 
-#include "../unvme/unvme.h"
-#include "../unvme/rdtsc.h"
+#include "../nvme/nvme.h"
+#include "../nvme/rdtsc.h"
 
 /// macro to print an io related error message
 #define IOERROR(s, p)   printf("ERROR: " s " lba=%#llx\r\n", (p)->lba)

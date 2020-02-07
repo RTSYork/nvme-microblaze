@@ -34,8 +34,8 @@
  * @brief NVMe header file
  */
 
-#ifndef _UNVME_NVME_H
-#define _UNVME_NVME_H
+#ifndef _NVME_NVME_H
+#define _NVME_NVME_H
 
 #include <stdint.h>
 
@@ -606,5 +606,5 @@ int nvme_cmd_write(nvme_queue_t* ioq, u16 cid, int nsid, u64 slba, int nlb, u64 
 int nvme_check_completion(nvme_queue_t* q, int* stat, u32* cqe_cs);
 int nvme_wait_completion(nvme_queue_t* q, int cid, int timeout);
 
-#endif  // _UNVME_NVME_H
+#endif  // _NVME_NVME_H
 

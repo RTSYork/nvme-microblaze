@@ -34,7 +34,7 @@
  * @brief memory support routines.
  */
 
-#include "unvme_mem.h"
+#include "nvme_mem.h"
 
 #include <unistd.h>
 #include <string.h>
@@ -42,7 +42,7 @@
 #include "pci_regs.h"
 #include "../pcie.h"
 
-#include "unvme_log.h"
+#include "nvme_log.h"
 
 /// Print fatal error and exit
 #define FATAL(fmt, arg...)  do { ERROR(fmt, ##arg); abort(); } while (0)

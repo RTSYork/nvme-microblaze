@@ -40,8 +40,8 @@
 
 #include "unvme_tests.h"
 
-#include "../unvme/unvme.h"
-#include "../unvme/unvme_nvme.h" // for printing get log page structures
+#include "../nvme/nvme.h"
+#include "../nvme/nvme_nvme.h" // for printing get log page structures
 
 static char* features[] = {
     "",

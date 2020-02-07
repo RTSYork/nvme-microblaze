@@ -34,7 +34,7 @@
  * @brief UNVMe client library interface functions.
  */
 
-#include "unvme_core.h"
+#include "nvme_core.h"
 
 /**
  * Open a client session with specified number of IO queues and queue size.

@@ -34,8 +34,8 @@
  * @brief Memory function support header files.
  */
 
-#ifndef _UNVME_MEM_H
-#define _UNVME_MEM_H
+#ifndef _NVME_MEM_H
+#define _NVME_MEM_H
 
 #include <stdlib.h>
 #include <pthread.h>
@@ -84,5 +84,5 @@ void mem_delete(mem_device_t* dev);
 int mem_alloc(mem_device_t* dev, mem_t* mem, size_t size, int clear);
 int mem_free(mem_t* mem);
 
-#endif // _UNVME_MEM_H
+#endif // _NVME_MEM_H
 

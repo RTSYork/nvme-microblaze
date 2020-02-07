@@ -1,5 +1,5 @@
-#ifndef SRC_UNVME_TIMER_H_
-#define SRC_UNVME_TIMER_H_
+#ifndef SRC_NVME_TIMER_H_
+#define SRC_NVME_TIMER_H_
 
 #include "xparameters.h"
 #include "xil_types.h"
@@ -27,4 +27,4 @@ static inline u64 timer_get_value() {
 	return (time2 << 32) | time1;
 }
 
-#endif /* SRC_UNVME_TIMER_H_ */
+#endif /* SRC_NVME_TIMER_H_ */

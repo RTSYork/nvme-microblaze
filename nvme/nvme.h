@@ -34,12 +34,12 @@
  * @brief UNVMe client header file.
  */
 
-#ifndef _UNVME_H
-#define _UNVME_H
+#ifndef _NVME_H
+#define _NVME_H
 
 #include <stdint.h>
-#include "unvme_mem.h"
-#include "unvme_nvme.h"
+#include "nvme_mem.h"
+#include "nvme_nvme.h"
 #include "../params.h"
 
 #ifndef _U_TYPE
@@ -159,5 +159,5 @@ unvme_iod_t unvme_acmd(unvme_device_t* dev, int qid, int opc, int nsid, void* bu
 int unvme_apoll(unvme_iod_t iod, int timeout);
 int unvme_apoll_cs(unvme_iod_t iod, int timeout, u32* cqe_cs);
 
-#endif // _UNVME_H
+#endif // _NVME_H
 

@@ -34,7 +34,7 @@
  * @brief UNVMe driver module.
  */
 
-#include "unvme_core.h"
+#include "nvme_core.h"
 
 #include <string.h>
 #include <signal.h>

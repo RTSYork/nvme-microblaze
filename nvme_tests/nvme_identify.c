@@ -37,9 +37,9 @@
 #include <string.h>
 #include <stdio.h>
 #include "nvme_tests.h"
-#include "../unvme/unvme_mem.h"
-#include "../unvme/unvme_nvme.h"
-#include "../unvme/unvme_log.h"
+#include "../nvme/nvme_mem.h"
+#include "../nvme/nvme_nvme.h"
+#include "../nvme/nvme_log.h"
 
 static mem_device_t memdev;
 static nvme_device_t nvmedev;

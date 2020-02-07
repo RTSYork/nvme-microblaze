@@ -14,7 +14,7 @@
 
 #include "unvme_tests.h"
 
-#include "../unvme/unvme.h"
+#include "../nvme/nvme.h"
 
 #include "../timer.h"
 #include "../params.h"

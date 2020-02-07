@@ -31,22 +31,73 @@
 
 /**
  * @file
- * @brief Logging support routines.
+ * @brief Logging header file.
  */
 
-#include "../unvme/unvme_log.h"
+#ifndef _NVME_LOG_H 
+#define _NVME_LOG_H 
 
-#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+/// @cond
+
+#define INFO(fmt, arg...)     log_msg(fmt "\n", ##arg)
+#define INFO_FN(fmt, arg...)  log_msg("%s " fmt "\n", __func__, ##arg)
+#define ERROR(fmt, arg...)    log_msg("ERROR: %s " fmt "\n", __func__, ##arg)
+
+//#define UNVME_DEBUG
+
+#ifdef UNVME_DEBUG
+    #define DEBUG             INFO
+    #define DEBUG_FN          INFO_FN
+    #define HEX_DUMP          hex_dump
+#else
+    #define DEBUG(arg...)
+    #define DEBUG_FN(arg...)
+    #define HEX_DUMP(arg...)
+#endif
+
+/// @endcond
+
+
+// Export function
+void log_msg(const char* fmt, ...);
+
 
 /**
- * Write a formatted message to stdout.
- * @param   fmt         formatted message
+ * Hex dump a data block byte-wise.
+ * @param   buf     buffer to read into
+ * @param   len     size
  */
-void log_msg(const char* fmt, ...)
+static inline void hex_dump(void* buf, int len)
 {
-    va_list args;
-	va_start(args, fmt);
-	vfprintf(stdout, fmt, args);
-	fflush(stdout);
-	va_end(args);
+    unsigned char* b = buf;
+    int i, k = 0, e = 44, t = 44;
+    char ss[3906];
+
+    if (len > 1024) len = 1024;
+
+    for (i = 0; i < len; i++) {
+        if (!(i & 15)) {
+            if (i > 0) {
+                ss[k] = ' ';
+                ss[t++] = '\n';
+                k = t;
+            }
+            e = t = k + 44;
+            k += sprintf(ss+k, "  %04x:", i);
+        }
+        if (!(i & 3)) ss[k++] = ' ';
+        k += sprintf(ss+k, "%02x", b[i]);
+        ss[t++] = isprint(b[i]) ? b[i] : '.';
+    }
+    ss[t] = 0;
+    for (i = k; i < e; i++) ss[i] = ' ';
+    INFO("%s", ss);
 }
+
+
+#endif // _NVME_LOG_H
+

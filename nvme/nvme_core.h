@@ -34,15 +34,15 @@
  * @brief uNVMe core header file.
  */
 
-#ifndef _UNVME_CORE_H
-#define _UNVME_CORE_H
+#ifndef _NVME_CORE_H
+#define _NVME_CORE_H
 
 #include <sys/types.h>
 
-#include "unvme.h"
-#include "unvme_log.h"
-#include "unvme_mem.h"
-#include "unvme_nvme.h"
+#include "nvme.h"
+#include "nvme_log.h"
+#include "nvme_mem.h"
+#include "nvme_nvme.h"
 
 /// Doubly linked list add node
 #define LIST_ADD(head, node)                                    \
@@ -81,5 +81,5 @@ int unvme_do_poll(unvme_desc_t* desc, int sec, u32* cqe_cs);
 unvme_desc_t* unvme_do_cmd(unvme_device_t* dev, int qid, int opc, int nsid, void* buf, u64 bufsz, u32 cdw10_15[6]);
 unvme_desc_t* unvme_do_rw(unvme_device_t* dev, int qid, int opc, void* buf, u64 slba, u32 nlb);
 
-#endif  // _UNVME_CORE_H
+#endif  // _NVME_CORE_H
 
